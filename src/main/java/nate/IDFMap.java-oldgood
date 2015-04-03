@@ -1,0 +1,217 @@
+package nate;
+
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
+import java.io.FileReader;
+import java.io.FileWriter;
+import java.util.HashMap;
+import java.util.Set;
+import java.util.TreeSet;
+
+
+public class IDFMap {
+  private HashMap<String,Integer> _wordToDocAppearances;
+  private HashMap<String,Integer> _wordToFrequencies;
+  private HashMap<String,Float> _wordToIDF;
+  private int _numDocs = 0;
+  private int _totalCorpusCount = 0;
+
+  public IDFMap() {
+    this(20000);
+  }
+
+  public IDFMap(int capacity) {
+    _wordToDocAppearances = new HashMap<String, Integer>(capacity);
+    _wordToFrequencies = new HashMap<String, Integer>(capacity);
+    _wordToIDF = new HashMap<String, Float>(capacity);
+  }
+
+  public IDFMap(String filename) {
+    this(20000);
+    fromFile(filename);
+  }
+
+
+  /**
+   * @param filename The name of a file to create for the IDF scores
+   */  
+  public void saveToFile(String filename) {
+    Set<String> keys = _wordToIDF.keySet();
+    System.out.println("key size " + keys.size());
+    TreeSet<String> treeset = new TreeSet<String>(keys);
+    try {
+      BufferedWriter out = new BufferedWriter(new FileWriter(filename));
+      out.write("NUMDOCS " + _numDocs + "\n");
+      for( String word : treeset )
+        //	out.write( word + " : " + wordToDocAppearances.get(word) + " : " +
+        //		   wordToIDF.get(word) + "\n");
+        out.write( word + "\t" + 
+            _wordToFrequencies.get(word) + "\t" +
+            _wordToDocAppearances.get(word) + "\t" +
+            _wordToIDF.get(word) + "\n");
+      out.close();
+    } catch( Exception ex ) { ex.printStackTrace(); }
+  }
+
+
+  /**
+   * @param filename The name of the IDF file
+   * @desc Read in a list of words and their IDF counts
+   */
+  public void fromFile(String filename) {
+    if( filename.length() > 0 ) {
+      System.out.println("...reading IDF file " + filename);
+      String line = null;
+
+      BufferedReader in = null;
+      try {
+        in = new BufferedReader(new FileReader(filename));
+      } catch( Exception ex ) { 
+        System.out.println("Error opening file: " + filename);
+        System.exit(-1);
+      }
+
+      try {
+        line = in.readLine();
+        // number of docs
+        _numDocs = Integer.valueOf(line.substring(line.indexOf(' ')+1));
+        System.out.println("...based on " + _numDocs + " docs");
+        // word list
+        while( (line = in.readLine()) != null ) {
+          String parts[] = line.split("\t");
+          int freq = Integer.valueOf(parts[1]);
+          _totalCorpusCount += freq;
+
+          _wordToFrequencies.put(parts[0], freq);
+          _wordToDocAppearances.put(parts[0], Integer.valueOf(parts[2]));
+          _wordToIDF.put(parts[0], Float.valueOf(parts[3]));
+          //	  System.out.println(parts[0] + " " + Float.valueOf(parts[2]));
+        }
+      } catch( Exception ex ) { 
+        System.out.println("Exception reading line: " + line);
+        ex.printStackTrace(); 
+        System.exit(1);
+      }
+
+    } else {
+      System.out.println("WARNING: IDFMap fromFile() got an empty path");
+      System.exit(1);
+    }
+  }
+
+
+  public void printIDF() {
+    Set<String> keys = _wordToIDF.keySet();
+    TreeSet<String> treeset = new TreeSet<String>(keys);
+    //    Object words[] = keys.toArray();
+    //    Arrays.sort(words);
+    for( String word : treeset )
+      System.out.println( word + " " + _wordToIDF.get(word) );
+  }
+
+
+  /**
+   * @desc Calculate the IDF score for all verbs
+   */
+  public void calculateIDF() {
+    System.out.println("Calculating IDF");
+    _totalCorpusCount = 0;
+    
+    Set<String> keys = _wordToDocAppearances.keySet();
+    for( String key : keys ) {
+      int seenInDocs = _wordToDocAppearances.get(key);
+      float idf = (float)Math.log((double)_numDocs / (double)seenInDocs);
+      //      System.out.println("calced " + key + " " + idf);
+      _wordToIDF.put(key, idf);
+      _totalCorpusCount += _wordToFrequencies.get(key);
+    }
+  }
+
+  /**
+   * @return True if the given word is in our map, false otherwise.
+   */
+  public boolean contains(String word) {
+    return _wordToIDF.containsKey(word);
+  }
+  
+  /**
+   * @param word A string word
+   * @return The IDF of the word
+   */
+  public float get(String word) {
+    if( !_wordToIDF.containsKey(word) ) {
+      //      System.out.println("Warning: " + word + " not known");
+      return 0.0f;
+    }
+    return _wordToIDF.get(word);
+  }
+
+  /**
+   * @param word A string word
+   * @return The number of documents in which the word appears
+   */
+  public int getDocCount(String word) {
+    if( !_wordToDocAppearances.containsKey(word) ) {
+      //      System.out.println("Warning: " + word + " not known");
+      return 0;
+    }
+    return _wordToDocAppearances.get(word);
+  }
+
+  /**
+   * @param word A string word
+   * @return The number of times the word appears (term frequency over corpus)
+   */
+  public int getFrequency(String word) {
+    if( !_wordToFrequencies.containsKey(word) ) {
+      return 0;
+    }
+    return _wordToFrequencies.get(word);
+  }
+
+  /**
+   * @return The set of words
+   */
+  public Set<String> getWords() {
+    return _wordToIDF.keySet();
+  }
+
+  /**
+   * @desc Increase the number of documents a single word appears in by one.
+   * @param word A string word
+   */
+  public void increaseDocCount(String word) {
+    //    System.out.println("Increasing count " + word);
+    if( !_wordToDocAppearances.containsKey(word) )
+      _wordToDocAppearances.put(word, 1);
+    else _wordToDocAppearances.put(word, _wordToDocAppearances.get(word)+1);
+  }
+
+  /**
+   * @desc Increase the number of documents a single word appears in by one.
+   * @param word A string word
+   */
+  public void increaseTermFrequency(String word) {
+    //    System.out.println("Increasing count " + word);
+    if( !_wordToFrequencies.containsKey(word) )
+      _wordToFrequencies.put(word, 1);
+    else _wordToFrequencies.put(word, _wordToFrequencies.get(word)+1);
+  }
+
+  /**
+   * @return The sum of all term frequency counts of all words.
+   */
+  public int totalCorpusCount() {
+    return _totalCorpusCount;
+  }
+
+  /**
+   * @desc Increase the total # of documents
+   */
+  public void increaseDocCount() {
+    //    System.out.println("Increasing total doc count ");
+    _numDocs++;
+  }
+
+  public int numDocs() { return _numDocs; }
+}

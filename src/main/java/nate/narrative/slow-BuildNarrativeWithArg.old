@@ -1,0 +1,866 @@
+package nate.narrative;
+
+import java.util.Vector;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.HashSet;
+import java.util.Set;
+import java.util.Arrays;
+import java.io.FileReader;
+import java.io.FileInputStream;
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
+
+import nate.Pair;
+import nate.WordEvent;
+import nate.BasicEventAnalyzer;
+import nate.args.VerbPairArgCounts;
+
+
+/**
+ * This class builds sets of events in a single narrative, using the
+ * argument type to help guide the clustering process.
+ * Input: (1) pairwise scores (pmi or t-test) between events
+ *        (2) counts of event arguments
+ *
+ * Provides a command line interface that lets you enter events with arguments
+ * and builds the narrative based on that initial cluster.
+ *
+ */
+public class BuildNarrativeWithArg {
+  EventPairScores pairs; // the pmi or t-test scores between pairs
+  VerbPairArgCounts argCounts; // occurrence counts of args with verb pairs
+  HashMap<String,HashMap<String,Float>> scores = new HashMap();
+  //  static float factor = 0.25f; // threshold factor
+  static float factor = 0.01f; // threshold factor
+  static float scoreCutoff = 0.25f; // group member cutoff
+  static float emptyArgPenalty = 1.0f; // if no arguments seen, penalize the pairwise score
+  static float argWeight = 0.08f;
+  int maxNarrativeSize = 20;
+  // The size of the group where we will stop considering new arguments.
+  // For instance, if we add a 6th event, and that event has arguments that we have not
+  // yet seen in the previous 5, we will not consider those arguments.
+  static int groupSizeConsiderNewArgs = 4;
+  String pairsPath = "";
+  String argCountsPath = "";
+  boolean ignoreArgs = false;
+
+  /**
+   * Constructor
+   */
+  public BuildNarrativeWithArg(EventPairScores pairScores, VerbPairArgCounts argCounts) {
+    this.pairs = pairScores;
+    this.argCounts = argCounts;
+  }
+  public BuildNarrativeWithArg(String pairsPath, String argsPath) {
+    this.pairsPath = pairsPath;
+    this.argCountsPath = argsPath;
+  }
+
+
+  /**
+   * Load pairs and argument counts from disk
+   */
+  public void loadData() {
+    pairs = new EventPairScores();
+    pairs.fromFile(pairsPath, null, 0.0f, false);
+    BasicEventAnalyzer.reportMemory();
+
+    argCounts = new VerbPairArgCounts(argCountsPath, 2);
+    BasicEventAnalyzer.reportMemory();
+  }
+
+
+  /**
+   * Load pairs and argument counts from disk, only loading information relevant
+   * to the given verb and dep.  (save memory)
+   */
+  public void loadData(String verb, String dep) {
+    pairs = new EventPairScores();
+    //    pairs.fromFile(pairsPath, null, 0.0f, false);
+    Set<String> goodNeighbors = pairs.fromFile(pairsPath, null, 0.0f, false, verb);
+    BasicEventAnalyzer.reportMemory();
+
+    //    argCounts = new VerbPairArgCounts(argCountsPath, 2);
+    argCounts = new VerbPairArgCounts(argCountsPath, 2, goodNeighbors);
+    BasicEventAnalyzer.reportMemory();
+  }
+
+
+  /**
+   * Endless loop that reads from STDIN to build narratives around different
+   * events without reloading data from disk.
+   */
+  public void onlineInput() {
+    try {
+      BufferedReader in = new BufferedReader(new InputStreamReader(System.in));
+      String input;
+      System.out.print("> ");
+
+      while( (input = in.readLine()) != null ) {
+	// Read one line from input
+	String parts[] = input.split(" ");
+
+	// Check the format
+	if( parts.length == 0  ) {
+	  System.out.println("Wrong format: verb dep verb2 dep2 ... [arg]");
+	  System.out.println("- Set max size: max <int>");
+	  System.out.println("- Toggle args ignore: ignoreargs");
+	  System.out.print("> ");
+	}
+
+	else if( parts[0].equals("max") ) {
+	  try {
+	    maxNarrativeSize = Integer.valueOf(parts[1]);
+	  } catch( Exception ex ) { System.out.println("Error setting max"); }
+	}
+
+	else if( parts[0].equals("ignoreargs") ) {
+	  if( ignoreArgs ) ignoreArgs = false;
+	  else ignoreArgs = true;
+	  System.out.println("ignoreArgs " + ignoreArgs);
+	}
+
+	// Build a narrative
+	else {
+	  // Pull off the argument if it exists e.g. "arrest o convict o criminal"
+	  String matchArg = null;
+	  if( parts.length % 2 == 1 )
+	    matchArg = parts[parts.length-1];
+
+	  // Pull off the events now  e.g. "arrest o convict o"
+	  Set<String> group = new HashSet();
+	  for( int i = 0; i < parts.length-1; i += 2 )
+	    group.add(EventPairScores.buildKey(parts[i], parts[i+1]));
+	  Vector<NarrativeEvent> n = createNarrative(group, matchArg);
+
+	  // Output the result
+	  for( NarrativeEvent e : n ) System.out.println(e);
+	  System.out.println("FIN");      
+	}
+
+	System.out.print("> ");
+      }
+    } catch( Exception ex ) { ex.printStackTrace(); }
+  }
+
+  /**
+   * Calculates a score for an event neighbor against the entire narrative group.
+   * Tries all possible arguments and chooses the max group score argument.
+   * @return A pair (1) best argument, (2) the group score with the best argument
+   */
+  private Pair groupScore(String mainVerb, String mainDep,
+			  String neighVerb, String neighDep, 
+			  Set<String> group) {
+    String mainKey = EventPairScores.buildKey(mainVerb, mainDep);
+    String neighKey = EventPairScores.buildKey(neighVerb, neighDep);
+    float bestScore = 0.0f;
+    String bestArg = "";
+
+    //    System.out.println("**" + mainKey + " " + neighKey + "** " + group.size());
+    // Make the unionArgs here
+    Map<String,Float> unionArgsLocal = unionArgs(argCounts, group, mainVerb, mainDep, neighVerb, neighDep);
+    //    System.out.println("groupScore union args has " + unionArgsLocal.size());
+
+    // Try all arguments
+    for( String arg : unionArgsLocal.keySet() ) {
+      // best neighbor-main score
+      float score = scorePairWithArg(mainVerb, mainDep,
+				     neighVerb, neighDep,
+				     arg,
+				     pairs.getScore(mainKey, neighKey),
+				     argCounts);
+    
+      // loop over other GROUP members
+      for( String g : group ) {
+	Pair gPair = EventPairScores.split(g);
+	String gVerb = (String)gPair.first();
+	String gDep  = (String)gPair.second();
+
+	float gscore = scorePairWithArg(gVerb, gDep,
+					neighVerb, neighDep,
+					arg,
+					pairs.getScore(neighKey, g),
+					argCounts);
+
+	// This conditional is in verbgroups-incr.pl, but I'm not sure why?
+	//	if( gscore > scoreCutoff ) {
+
+	  // best main-neighbor score
+	  float matchmain = scorePairWithArg(mainVerb, mainDep,
+					     gVerb, gDep,
+					     arg,
+					     pairs.getScore(mainKey, g),
+					     argCounts);
+	  score += (gscore + matchmain) / (float)2; // average
+	  //	  System.out.println(" + " + gscore + " (" + neighKey + " , " + g + ")");
+	  //	}
+      }
+
+      // Save the best score
+      if( score > bestScore ) {
+	//	System.out.println("new best!! (arg " + arg + ") " + score);
+	bestScore = score;
+	bestArg = arg;
+      }
+    }
+
+    //    System.out.println("bestArg=" + bestArg + " with " + bestScore);
+    return new Pair(bestArg, bestScore);
+  }
+
+
+  private Vector<String> growCluster( Set<String> group, Set<String> neighbors ) {
+    return growCluster(group, neighbors, null);
+  }
+
+  /**
+   * Given a set of events, continuously add events that cluster tightly.
+   * Destructively adds events to the given set.
+   * @param group The starting set of events to grow the cluster from.
+   * @param neighbors The set of all possible neighbors to add to this cluster.
+   * @param matchArg An optional argument. If given, then we require all best neighbors
+   *                 to match this argument and ignore all other possible arguments.
+   * @return A Vector of the same strings in the Set "group", but ordered by the
+   *         order in which they were added.
+   * O(R*G^2) : R number of arguments, G group size
+   */
+  private Vector<String> growCluster( Set<String> group, 
+				      Set<String> neighbors, 
+				      String matchArg) {
+    System.out.println("Growing cluster from size " + group.size() + " of " + 
+		       neighbors.size() + " neighbors");
+    Vector<String> orderedGroup = new Vector(group);
+    Map<String,Float> args = new HashMap();
+    unionArgs(argCounts, group, args);
+    System.out.println("With " + args.size() + " args");
+
+    // Create the group scores array for each argument
+    //    Float scores[] = new Float[args.size()];
+    groupScoreAllArgs(pairs, argCounts, ignoreArgs, group, args);
+
+    // Loop continuously
+    boolean changed = true;
+    Float bestscore = 0.0f;  Float bestgain = 0.0f;
+    String bestneigh = "";  String bestarg = "";
+    int numLoops = 0;
+    
+    while( changed && numLoops < maxNarrativeSize ) {
+      changed = false;
+
+      // Threshold based on size of neighbors words
+      float threshold = (group.size()+1) * factor;
+
+      // Loop over all arguments
+      int i = 0;
+      for( String arg : args.keySet() ) {
+	// If we have an argument we always want, then we only look at that one.
+	if( matchArg == null || arg.equals(matchArg) ) {
+	  //	  System.out.println("Checking arg " + arg);
+	  // Loop over all neighbors
+	  for( String neigh : neighbors ) {
+	    if( !group.contains(neigh) ) {
+	      Float addscore = groupScoreWithArgIncremental(neigh, arg, group);
+	      Float newtotal = addscore + args.get(arg); //scores[i];
+	      
+	      //	    System.out.println("neigh " + neigh + " +" + addscore + " new=" + newtotal);
+	      
+	      // Is this the best?
+	      if( newtotal > bestscore && addscore > threshold ) {
+		bestscore = newtotal;
+		bestneigh = neigh;
+		bestarg = arg;
+		bestgain = addscore;
+		changed = true;
+	      }
+	    }
+	  }
+	} // if matchArg
+	i++;
+      } // for args
+
+      if( changed ) {
+	// Update the scores for each possible argument
+	i = 0;
+	for( String arg : args.keySet() ) {
+	  Float addscore = groupScoreWithArgIncremental(bestneigh, arg, group);
+	  args.put(arg, args.get(arg) + addscore);
+	   // scores[i++] += addscore;
+	}
+
+	if( !ignoreArgs ) printSortedArgs(args);
+
+	// Grow the cluster
+	System.out.println("**** Adding " + bestneigh + " " + bestscore + 
+			   " +" + bestgain +
+			   " (arg " + bestarg + ") ****");
+	group.add(bestneigh);	
+	orderedGroup.add(bestneigh);
+
+	// Add new arguments we didn't know about (if the group is smallish)
+	if( matchArg == null && group.size() <= groupSizeConsiderNewArgs ) {
+	  unionArgs(argCounts, group, args);
+	  groupScoreAllArgs(pairs, argCounts, ignoreArgs, group, args);
+	  System.out.println("New args size = " + args.size());
+	}
+      }
+      
+      numLoops++;
+    }
+    return orderedGroup;
+  }
+
+  /**
+   * Build an array of group scores, one for each given argument in the args set.
+   * Destructively alters the given scores array.
+   * O(R*G^2) : R number of arguments, G group size
+   */
+  public static void groupScoreAllArgs(EventPairScores pairs,
+				       VerbPairArgCounts argCounts,
+				       boolean ignoreArgs,
+				       Set<String> group, 
+				       Map<String,Float> args) {
+    int i = 0;
+    for( Map.Entry<String,Float> entry : args.entrySet() ) {
+      //    for( String arg : args.keySet() ) {
+      if( entry.getValue() < 0.0f ) {
+	String arg = entry.getKey();
+	args.put(arg, groupScoreWithArg(pairs, argCounts, group, arg, ignoreArgs));
+      }
+    }
+  }
+
+  /**
+   * Calculates a true group score for the given set of events and an
+   * argument.  Sums scores over all pairs, does not normalize by group size.
+   * O(G^2) : G group size
+   * @return The group score - NOT normalized for group size
+   */
+  public static Float groupScoreWithArg(EventPairScores pairs,
+					VerbPairArgCounts argCounts,
+					Set<String> group, 
+					String arg,
+					boolean ignoreArgs) {
+    float score = 0.0f;
+
+    String groupArray[] = new String[group.size()];
+    group.toArray(groupArray);
+
+    // Double loop over group members
+    for( int i = 0, n = groupArray.length; i < n-1; i++ ) {
+      String g = groupArray[i];
+      Pair gPair = EventPairScores.split(g);
+      String gVerb = (String)gPair.first();
+      String gDep  = (String)gPair.second();
+
+      for( int j = i+1; j < n; j++ ) {
+	String h = groupArray[j];
+	Pair hPair = EventPairScores.split(h);
+	String hVerb = (String)hPair.first();
+	String hDep  = (String)hPair.second();
+	
+	// Pairwise score with an argument	
+	float gscore = scorePairWithArg(gVerb, gDep,
+					hVerb, hDep,
+					arg,
+					pairs.getScore(g, h),
+					argCounts,
+					ignoreArgs);
+	//	System.out.println(gVerb + "-" + gDep + " " + hVerb + "-" + hDep + " " + arg +
+	//			   "=" + gscore);
+	//	System.out.println( score + " + " + gscore);
+	score += gscore;
+      }
+    }
+
+    //    System.out.println("groupScoreWithArg " + arg + " score=" + score);
+    return score;
+  }
+
+
+  /**
+   * This function calculates the score contribution of a new verb/dep to the group,
+   * and returns that value.  It ignores the scores of the rest of the group...you should
+   * precompute that and save it elsewhere.
+   * O(G) : G group size
+   * @return The score of just the new verb
+   */
+  private Float groupScoreWithArgIncremental(String newVerbDep, String arg,
+					     Set<String> group) {
+    float score = 0.0f;
+
+    Pair newPair = EventPairScores.split(newVerbDep);
+    String newVerb = (String)newPair.first();
+    String newDep = (String)newPair.second();
+
+    // Loop over group members
+    for( String g : group ) {
+      Pair gPair = EventPairScores.split(g);
+      String gVerb = (String)gPair.first();
+      String gDep  = (String)gPair.second();
+
+      // Pairwise score with an argument	
+      float gscore = scorePairWithArg(gVerb, gDep,
+				      newVerb, newDep,
+				      arg,
+				      pairs.getScore(g, newVerbDep),
+				      argCounts);
+      score += gscore;
+    }
+
+    return score;
+  }
+
+
+  /**
+   * @desc Creates a discrete clustered narrative centered around
+   *       the given event.
+   * @param event The core event to build the narrative around  "convict-o"
+   * @return A hashmap of narrative events and their individual scores
+   *         Does not include the main event.
+
+  public Vector<NarrativeEvent> createNarrative(String verb, String dep) {
+
+    // Normalize the dependency type
+    dep = WordEvent.normalizeRelation(dep);
+
+    System.out.println("Getting neighbors of " + verb + "-" + dep + " (BuildNarrative)");
+    // Make a list of neighbors
+    HashMap<String,Float> neighborScores = pairs.getNeighbors(verb, dep);
+    // Return NOW if there are no neighbors
+    if( neighborScores == null ) return null;
+    Set<String> neighbors = neighborScores.keySet();
+
+    // array to hold the ith event's current score with the group
+    float groupScores[] = new float[neighbors.size()];
+
+    System.out.println("Finding best first neighbor of " + neighbors.size() + " neighbors...");
+    // Find the best neighbor  O(N)
+    float bestscore = 0.0f;   float bestmainscore = 0.0f;   String bestn = null; 
+    String mainArg = "";
+    int i = 0;
+    for( String neigh : neighbors ) {
+      Pair pair = EventPairScores.split(neigh);
+      Pair result = scorePair(verb, dep, 
+			      (String)pair.first(), (String)pair.second(),
+			      neighborScores.get(neigh), argCounts);
+      String arg = (String)result.first();
+      Float score = (Float)result.second();
+
+      groupScores[i++] = score;
+      if( score > bestscore ) {
+	bestscore = score;
+	bestn = neigh;
+	bestmainscore = score;
+	mainArg = arg;
+      }
+    }
+
+    System.out.println("bestn = " + bestn + " at " + bestscore);
+    System.out.println("Best argument = " + mainArg);
+    System.out.println("Finding all members now from " + neighbors.size() + " neighbors...");
+
+    // Add this first best guy to the group
+    HashSet<String> group = new HashSet();
+    group.add(bestn);
+
+    // Make the union of all seen arguments
+    //    Set<String> unionArgs = unionArgs(argCounts, neighbors, verb, dep);
+    //    System.out.println("Union arguments size: " + unionArgs.size());
+
+    // add all neighbors  - O(N^2)  - N number of neighbors
+    boolean changed = true;
+    String bestArg = "";
+    while( changed && bestn != null ) {
+
+      // Add the best
+      changed = false;
+      bestn = null;
+      bestscore = 0.0f;
+
+      // Threshold based on size of neighbors words
+      float threshold = (group.size()+1) * factor;
+
+      // Update all event scores with the group  - O(N)
+      i = 0;
+      for( String neigh : neighbors ) {
+	Pair verbDep = EventPairScores.split(neigh);
+	String neighVerb = (String)verbDep.first();
+	String neighDep  = (String)verbDep.second();
+
+	// Calculate the group score with this neighbor
+	Pair gpair = groupScore(verb, dep, neighVerb, neighDep, group);
+	Float gscore = (Float)gpair.second();
+	groupScores[i] = gscore;
+
+	// Save the highest scorer
+	if( !group.contains(neigh) && gscore > bestscore ) {
+	  bestscore = gscore;
+	  bestn = neigh;
+	  bestArg = (String)gpair.first();
+	}
+
+	i++;
+      }
+
+      // Score high enough?
+      if( bestscore > threshold ) {
+	System.out.println("**** Adding " + bestn + " " + bestscore + " (arg " +
+			   bestArg + ") ****");
+	group.add(bestn); 
+	changed = true;
+      }
+    }
+
+    // Convert into NarrativeEvent objects
+    Vector<NarrativeEvent> narrative = new Vector();
+    int j = 0;
+    for( String neigh : neighbors ) {   
+      if( group.contains(neigh) )
+	narrative.add(new NarrativeEvent(neigh, groupScores[j]));
+      j++;
+    }
+
+    return narrative;
+  }
+  */
+
+  /**
+   * @desc Creates a discrete clustered narrative centered around
+   *       the given event.
+   * @param events The set of core events to build the narrative around
+   * @param arg The argument (can be null) that all events must use
+   * @return A hashmap of narrative events and their individual scores
+   *         Does not include the main event.
+   */
+  public Vector<NarrativeEvent> createNarrative(Set<String> events, String arg) {
+
+    System.out.println("Getting neighbors of " + events.size() + " events");
+    // Make a list of neighbors
+    Set<String> neighbors = pairs.getNeighbors(events);
+    // Return NOW if there are no neighbors
+    if( neighbors == null ) return null;
+
+    // Make a copy of these events to build off of
+    Set<String> group = new HashSet(events);
+
+    // Grow the cluster!!
+    Vector<String> orderedGroup = growCluster(group, neighbors, arg);
+
+    // Convert into NarrativeEvent objects
+    Vector<NarrativeEvent> narrative = new Vector();
+    int j = 0;
+    for( String neigh : orderedGroup ) {   
+      narrative.add(new NarrativeEvent(neigh, 0.0f));
+      j++;
+    }
+//     for( String neigh : neighbors ) {   
+//       if( group.contains(neigh) )
+// 	narrative.add(new NarrativeEvent(neigh, 0.0f));
+//       j++;
+//     }
+
+    return narrative;
+  }
+
+
+  private float scorePairWithArg(String verb, String dep,
+				 String neighVerb, String neighDep,
+				 String arg,
+				 Float pairScore,
+				 VerbPairArgCounts argCounts ) {
+    return scorePairWithArg(verb, dep, neighVerb, neighDep, arg, 
+			    pairScore, argCounts, ignoreArgs);
+  }
+
+  /**
+   * Return the score for a single pair of events sharing the given arg.
+   */
+  public static float scorePairWithArg(String verb, String dep,
+				       String neighVerb, String neighDep,
+				       String arg,
+				       Float pairScore,
+				       VerbPairArgCounts argCounts,
+				       boolean ignoreArgs) {
+    //    System.out.println("pairScore = " + pairScore);
+    // This pair of events was never seen together
+    if( pairScore == null ) {
+      //      System.out.println("New pair: " + verb + "-" + dep + " " + neighVerb + "-" + neighDep);
+      return officialPairScore(null, 0, null);
+    }
+
+    // If we're ignoring arguments in the score (Debugging)
+    if( ignoreArgs )
+      return pairScore;
+
+    // The argument score, given the pair and arg
+    String pair = argCounts.buildKey(verb, dep, neighVerb, neighDep);
+    Map<String,Integer> theArgs = argCounts.getArgsForPair(pair);
+    //        System.out.println("theArgs = " + theArgs + " arg=" + arg);
+    Integer argCount = 0;
+    if( arg != null && theArgs != null ) {
+      argCount = theArgs.get(arg);
+      if( argCount == null ) argCount = 0;
+    }
+
+    return officialPairScore(pairScore, argCount, theArgs);
+  }
+
+
+  /**
+   * Return the score for a single pair of events.  Finds the best scoring
+   * argument to use.
+   * @param neighborScores A map of all neighbors that were seen with the verb/dep event
+   * @param argCounts The full map of event pairs and argument counts
+   * @return A pair: the argument string, and the float score
+
+  private Pair scorePair(String verb, String dep,
+			 String neighVerb, String neighDep,
+			 Float pairScore,
+			 VerbPairArgCounts argCounts) {
+    // The best argument score, given the pair
+    String pair = VerbPairArgCounts.buildKey(verb, dep, neighVerb, neighDep);
+    String arg = argCounts.getBestArgForPair(pair);
+
+    // This pair of events was never seen together
+    if( pairScore == null ) {
+      //      String neighKey = EventPairScores.buildKey(neighVerb, WordEvent.normalizeRelation(neighDep));
+      //      System.out.print("New pair: " + verb + "-" + dep + " " + neighVerb + "-" + neighDep);
+      //      System.out.println("   neighKey=" + neighKey + " pairKey=" + pair);
+      return new Pair(arg, officialPairScore(null, 0, null));
+    }
+
+    // No arguments known for the pair
+    if( arg == null )
+      //      System.out.println("No known arguments for pair: " + verb + "-" + dep + " " + neighVerb + "-" + neighDep);
+      return new Pair(null, officialPairScore(pairScore, 0, null));
+    
+    // If we're ignoring arguments in the score (Debugging)
+    if( ignoreArgs )
+      return new Pair(null, pairScore);
+
+    // Get the argument counts
+    Map<String,Integer> theArgs = argCounts.getArgsForPair(pair);
+    //    System.out.println("theArgs = " + theArgs + " arg=" + arg);
+    Integer argCount = (theArgs != null ? theArgs.get(arg) : 0);
+
+    //    return new Pair(arg, (pairScore * argWeight * (argCount.floatValue() / totalCount.floatValue())));
+    return new Pair(arg, officialPairScore(pairScore, argCount, theArgs));
+  }
+   */
+
+  /**
+   * Returns the event-event-arg score.
+   * @param pairScore The PMI/t-test score between two events
+   * @param frequencyOfArg The number of times an argument was seen with the pair of events
+   * @param theArgs The list of arguments with their frequency counts
+   */
+  public static Float officialPairScore(Float pairScore, int frequencyOfArg, Map<String,Integer> theArgs) {
+    // No score for the pair
+    if( pairScore == null )
+      return 0.0f;
+
+    int totalCount = sumCounts(theArgs);
+
+    // No arguments ever seen with pair
+    if( totalCount == 0 )
+      //      return pairScore * argWeight * emptyArgPenalty;
+      return pairScore;
+
+    // Pair has a score, and we've seen arguments
+    else {
+      // Laplace smoothing
+      frequencyOfArg++;
+      totalCount += theArgs.size() + 1;
+      
+      //      System.out.println("  " + pairScore + " * " + argWeight + " * 1+" + (float)Math.log(frequencyOfArg));
+      //      return pairScore * argWeight * (1.0f + (float)Math.log(frequencyOfArg));
+      return pairScore + argWeight * (1.0f + (float)Math.log(frequencyOfArg));
+    }
+  }
+
+  /**
+   * Sum all the counts in the list of arguments
+   */
+  public static Integer sumCounts(Map<String,Integer> counts) {
+    Integer total = 0;
+    if( counts != null ) {
+      for( Map.Entry<String,Integer> entry : counts.entrySet() ) {
+	total += entry.getValue();
+      }
+    }
+    return total;
+  }
+
+
+  /**
+   * Creates a discrete narrative trimmed to a maximum size
+   * @param event The string of the event "convict-o"
+   * @param maxsize The maximum size of the narrative to return
+
+  public Vector<NarrativeEvent> createNarrative(String verb, String dep, int maxsize) {
+    Vector<NarrativeEvent> trimmed = new Vector(maxsize);
+
+    // Get the biggest possible narrative, sort 
+    Vector<NarrativeEvent> thegroup = createNarrative(verb, dep);
+    if( thegroup != null ) {
+      thegroup.trimToSize();
+      NarrativeEvent arr[] = new NarrativeEvent[thegroup.size()];
+      thegroup.toArray(arr);
+      Arrays.sort(arr);
+      
+      // Trim off the top maxsize elements
+      for( int i = 0; i < arr.length && i < maxsize; i++ ) {
+	System.out.println(i + ": " + arr[i]);
+	trimmed.add(arr[i]);
+      }
+    }
+
+    return trimmed;
+  }
+   */
+
+  /**
+   * Return a set of all arguments that are seen with the given set of
+   * neighbors and the main verb/dep pair.
+   */
+  private Map<String,Float> unionArgs(VerbPairArgCounts argCounts, 
+				      Set<String> neighbors, 
+				      String mainVerb, String mainDep,
+				      String neighVerb, String neighDep) {
+    Map<String,Float> theunion = new HashMap(neighbors.size()*2);
+
+    for( String neigh : neighbors ) {
+      // arrest-o
+      Pair verbDep = EventPairScores.split(neigh);
+      // arrest:convict;o:o
+      String pair = VerbPairArgCounts.buildKey(mainVerb, mainDep, 
+					       (String)verbDep.first(), (String)verbDep.second());
+      Map<String,Integer> pairArgs = argCounts.getArgsForPair(pair);
+
+      // Add these arguments to the full union
+      addArgs(theunion, pairArgs);
+    }
+
+    // Now add the neighbor's
+    String pair = VerbPairArgCounts.buildKey(mainVerb, mainDep, neighVerb, neighDep);
+    Map<String,Integer> pairArgs = argCounts.getArgsForPair(pair);
+    addArgs(theunion, pairArgs);
+
+    return theunion;
+  }
+
+
+  /**
+   * Fill the given "theunion" map with the set of all arguments that are seen 
+   * between pairs of the given set of neighbors.
+   * @param argCounts The argument frequency counts for pairs of events
+   * @param neighbors A set of events
+   * @param theunion A map from argument strings to scores, maybe partially filled in
+   * @return A map from the union of arguments to initialized scores (group scores used later)
+   */
+  public static void unionArgs( VerbPairArgCounts argCounts, 
+				Set<String> neighbors, 
+				Map<String,Float> theunion ) {
+    //    Map<String,Float> theunion = new HashMap(neighbors.size()*2);
+
+    for( String g : neighbors ) {
+      Pair gPair = EventPairScores.split(g);
+      for( String h : neighbors ) {
+	Pair hPair = EventPairScores.split(h);
+
+	String pair = VerbPairArgCounts.buildKey((String)gPair.first(), (String)gPair.second(),
+						 (String)hPair.first(), (String)hPair.second());
+	Map<String,Integer> pairArgs = argCounts.getArgsForPair(pair);
+
+	// Add these arguments to the full union
+	addArgs(theunion, pairArgs);
+      }
+    }
+  }
+
+
+  /**
+   * Add the arguments in the Map to the set of argument strings
+   * if they are acceptable arguments.  If the arguments already exist in the
+   * given map, don't overwrite the existing scores.
+   * @param theunion A map from argument strings to group scores
+   */
+  public static void addArgs(Map<String,Float> theunion, Map<String,Integer> pairArgs) {
+    if( pairArgs != null ) {
+      for( String arg : pairArgs.keySet() ) {
+	if( !genericArg(arg) && !theunion.containsKey(arg) ) {
+	  theunion.put(arg, -1.0f);
+	  //	  System.out.println("Saving " + arg);
+	}
+	//	else System.out.println("Skipping " + arg);
+      }
+    }
+  }
+
+
+  public static boolean genericArg(String arg) {
+    if( arg.equals("*per*") ||
+	arg.startsWith("*pro") ||
+	arg.equals("one") ||
+	arg.equals("person") ||
+	arg.equals("people") ||
+	arg.equals("man") ||
+	arg.equals("woman") ||
+	arg.equals("null") )
+      return true;
+    else
+      return false;
+  }
+
+  /**
+   * Takes a list of arguments and a corresponding array of scores that
+   * match the arguments.  Sorts the scores and prints the arguments in
+   * sorted order.
+   */
+  //  private void printSortedArgs(Map<String,Float> args, Float[] scores) {
+  private void printSortedArgs(Map<String,Float> args) {
+    NarrativeEvent arr[] = new NarrativeEvent[args.size()];
+
+    System.out.println("Arr size = " + arr.length);
+
+    int i = 0;
+    for( String arg : args.keySet() ) {
+      Float score = args.get(arg);
+      System.out.println(arg + " = " + score);
+      arr[i] = new NarrativeEvent(arg, score);
+      i++;
+    }
+    Arrays.sort(arr);
+    for( int j = 0, n = arr.length; j < 15 && j < n; j++ ) {
+      System.out.println(j + ": " + arr[j]);
+    }
+  }
+
+  /**
+   * Main
+   */
+  public static void main(String[] args) {
+    /*
+    // Load event pairwise scores
+    EventPairScores scores = new EventPairScores();
+    System.out.println("Loading pair scores...");
+    scores.fromFile(args[0], null, 0.0f, false, null);
+    System.out.println("Finished loading pair scores...");
+
+    // Load argument counts
+    System.out.println("Loading arg counts...");
+    VerbPairArgCounts argCounts = new VerbPairArgCounts(args[1], 2);
+    System.out.println("Finished loading arg counts...");
+    */
+
+    // Test narrative
+    //    BuildNarrativeWithArg builder = new BuildNarrativeWithArg(scores, argCounts);
+    BuildNarrativeWithArg builder = new BuildNarrativeWithArg(args[0], args[1]);
+
+    // Read the data files from disk
+    builder.loadData();
+
+    builder.onlineInput();
+  }
+}

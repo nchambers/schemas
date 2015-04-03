@@ -1,0 +1,62 @@
+package nate.narrative;
+
+import java.util.Set;
+import java.util.HashSet;
+import nate.Pair;
+
+public class Chain {
+  Set<String> events;
+  Set<String> verbs;
+  String arg = null;
+  float score = 0.0f;
+
+  Chain() {
+    events = new HashSet();
+    verbs = new HashSet();
+  }
+
+  public void add(String event) {
+    events.add(event);
+    // Save the verb
+    Pair pair = EventPairScores.split(event);
+    verbs.add((String)pair.first());
+  }
+
+  public void remove(String event) {
+    events.remove(event);
+    // Remove the verb
+    Pair pair = EventPairScores.split(event);
+    verbs.remove((String)pair.first());
+  }
+
+  public String eventAt(int index) {
+    int i = 0;
+    for( String event : events ) {
+      if( i == index ) return event;
+      i++;
+    }
+    return null;
+  }
+
+  public void setArg(String arg) {
+    this.arg = arg;
+  }
+
+  public boolean containsVerb(String verb) {
+    if( verbs != null && verbs.contains(verb) ) return true;
+    else return false;
+  }
+
+  public String toString() {
+    String str = "[";
+    for( String event : events ) str += " " + event;
+    str += " ] a=" + arg;
+
+    return str;
+  }
+
+  public Set<String> events() { return events; }
+  public String arg() { return arg; }
+  public float score() { return score; }
+  public int size() { return events.size(); }
+}

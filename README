@@ -1,0 +1,31 @@
+
+-----------------------------------------
+(1) Pre-Process the text.
+
+The java class AllParser handles parsing, dependencies, events, and coreference. 
+The run script runallparser.sh can be used.
+
+./runallparser.sh -output <output-directory> -input text <input-directory>
+
+This requires the parser's serialized file: englishPCFG.ser.gz 
+AllParser searches a couple paths for that file, including the current directory. You could use a symlink to point to it.
+
+* The "-input text" flag defines the type of input. This version has not been extensively tested. Check TextHandler.java if fixes need to be made. It treats each file as a single document.
+
+
+
+-----------------------------------------
+(2) Compute Inverse Document Frequencies.
+
+The class CalculateIDF handles word counting and IDF computation.
+It inputs a directory or single file of .parse files (created from Step 1), and 
+creates two .idf files in a specified output directory. A run script is provided:
+
+./runidf.sh -outdir idfs/ someoutput/
+
+You must create the output directory before running it.
+
+
+
+-----------------------------------------
+(3) Create the domain's argument counts.
