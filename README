@@ -1,4 +1,21 @@
 
+Prerequisites
+-------------
+
+CAEVO uses the WordNet dictionaries. The dictionary files can be
+downloaded from:
+
+    http://wordnetcode.princeton.edu/wn3.1.dict.tar.gz
+
+You also need a jwnl_file_properties.xml file that points to the location of
+your downloaded dictionary. The dictionary and this file can be stored anywhere
+on your drive. CAEVO looks for an environment variable JWNL that should have the
+path to the xml file.
+
+
+CODE EXECUTION STEPS
+--------------------
+
 -----------------------------------------
 (1) Pre-Process the text.
 
