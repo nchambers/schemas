@@ -14,10 +14,14 @@ import java.util.Vector;
 
 import nate.*;
 import nate.util.*;
+import edu.stanford.nlp.dcoref.CoNLL2011DocumentReader.NamedEntityAnnotation;
 import edu.stanford.nlp.dcoref.CorefChain;
 import edu.stanford.nlp.dcoref.CorefChain.CorefMention;
 import edu.stanford.nlp.dcoref.CorefCoreAnnotations.CorefChainAnnotation;
 import edu.stanford.nlp.ling.CoreAnnotations;
+import edu.stanford.nlp.ling.CoreAnnotations.NamedEntityTagAnnotation;
+import edu.stanford.nlp.ling.CoreAnnotations.TokensAnnotation;
+import edu.stanford.nlp.ling.CoreLabel;
 import edu.stanford.nlp.ling.HasWord;
 import edu.stanford.nlp.ling.Word;
 import edu.stanford.nlp.parser.lexparser.LexicalizedParser;
@@ -170,7 +174,7 @@ public class AllParser {
    * @param depdoc The document of dependencies that we're printing to.
    * @param corefdoc The document of coref chains that we're printing to.
    */
-  private void analyzeSentences(String currentStory, int currentStoryNum, Vector<String> paragraphs, GigaDoc pdoc, GigaDoc depdoc, GigaDoc corefdoc) {
+  private void analyzeSentences(String currentStory, int currentStoryNum, Vector<String> paragraphs, GigaDoc pdoc, GigaDoc depdoc, GigaDoc corefdoc, GigaDoc nerdoc) {
     int sid = 0;
 
     // Paragraphs may be multiple sentences
@@ -196,7 +200,7 @@ public class AllParser {
     // Loop over the sentences.
     List<Tree> trees = new ArrayList<Tree>();
     List<CoreMap> sentences = document.get(CoreAnnotations.SentencesAnnotation.class);
-    for(CoreMap sentence: sentences) {
+    for( CoreMap sentence: sentences ) {
       System.out.println("sid = " + sid);
       System.out.println("sent = " + sentence);
 
@@ -233,6 +237,41 @@ public class AllParser {
       //          TypedDependency tdep = new TypedDependency(edge.getRelation(), edge.getGovernor(), edge.getDependent());
       //        }        
 
+      // NER
+      String prev = null;
+      int start = -1;
+      int i = 1;
+      for( CoreLabel token : sentence.get(TokensAnnotation.class) ) {
+        String ne = token.get(NamedEntityTagAnnotation.class);
+//        System.out.println("ne=" + ne + " prev=" + prev);
+        // If no NE here, but there was a previous NE.
+        if( ne.equals("O") && prev != null ) {
+          NERSpan.TYPE type = nerStringToType(prev);
+          if( type != null ) nerdoc.addNER(new NERSpan(type, sid, start, i-1));
+//          System.out.println("Added1 " + (new NERSpan(type, sid, start, i-1)));
+          prev = null;
+          start = -1;
+        }
+        // If a different NE is next to the previous NE.
+        else if( !ne.equals("O") && prev != null && !ne.equals(prev) ) {
+          NERSpan.TYPE type = nerStringToType(prev);
+          if( type != null ) nerdoc.addNER(new NERSpan(type, sid, start, i-1));
+//          System.out.println("Added2 " + (new NERSpan(type, sid, start, i-1)));
+          prev = ne;
+          start = i;          
+        }
+        // Starting a new NE after some O's.
+        else if( !ne.equals("O") && prev == null ) {
+          prev = ne;
+          start = i;          
+        }
+        // Else the same NE continues.
+        else { }
+//        System.out.println("ne=" + ne + " " + token);
+        i++;
+      }
+//      System.exit(1);
+      
       sid++;
     }
     
@@ -260,6 +299,17 @@ public class AllParser {
     
   }
 
+  /**
+   * Converts a Stanford pipeline NE tag to our internal type.
+   */
+  private NERSpan.TYPE nerStringToType(String str) {
+    if( str == null ) return null;
+    else if( str.equals("ORGANIZATION") ) return NERSpan.TYPE.ORGANIZATION;
+    else if( str.equals("PERSON") ) return NERSpan.TYPE.PERSON;
+    else if( str.equals("LOCATION") ) return NERSpan.TYPE.LOCATION;
+    else return null; //NERSpan.TYPE.NONE;
+  }
+  
   private void mapCorefToTrees( GigaDoc doc, List<Tree> trees, Collection<EntityMention> entities ) {
     if( entities != null ) {
 
@@ -294,6 +344,7 @@ public class AllParser {
 
         String parseFile = _outputDir + File.separator + file + ".parse";
         String depsFile = _outputDir + File.separator + file + ".deps";
+        String nerFile = _outputDir + File.separator + file + ".ner";
         String corefFile = _outputDir + File.separator + file + ".events";
 
         GigaDocReader parsed = new GigaDocReader(parseFile);
@@ -326,12 +377,14 @@ public class AllParser {
 
           GigaDoc doc = null;
           GigaDoc depdoc = null;
+          GigaDoc nerdoc = null;
           GigaDoc corefdoc = null;
           try {
             // Create the parse output file.
             doc = new GigaDoc(parseFile, true);
             // Create the dependency output file.
             depdoc = new GigaDoc(depsFile, true);
+            nerdoc = new GigaDoc(nerFile, true);
             // Create the coref output file.
             corefdoc = new GigaDoc(corefFile, true);
           } catch( Exception ex ) {
@@ -346,9 +399,11 @@ public class AllParser {
 
             doc.openStory(giga.currentStory(), storyID);
             depdoc.openStory(giga.currentStory(), storyID);
-            analyzeSentences(giga.currentStory(), giga.currentDoc(), sentences, doc, depdoc, corefdoc);
+            nerdoc.openStory(giga.currentStory(), storyID);
+            analyzeSentences(giga.currentStory(), giga.currentDoc(), sentences, doc, depdoc, corefdoc, nerdoc);
             doc.closeStory();
             depdoc.closeStory();
+            nerdoc.closeStory();
 
             sentences = giga.nextStory();
             storyID++;
@@ -356,6 +411,7 @@ public class AllParser {
 
           doc.closeDoc();
           depdoc.closeDoc();
+          nerdoc.closeDoc();
         }
       }
     }
@@ -409,6 +465,7 @@ public class AllParser {
 
             String parseFile = _outputDir + File.separator + file + ".parse";
             String depsFile = _outputDir + File.separator + file + ".deps";
+            String nerFile = _outputDir + File.separator + file + ".ner";
             String corefFile = _outputDir + File.separator + file + ".events";
 
             Directory.createDirectory(_outputDir);
@@ -420,6 +477,7 @@ public class AllParser {
 
               GigaDoc doc = null;
               GigaDoc depdoc = null;
+              GigaDoc nerdoc = null;
               GigaDoc corefdoc = null;
 
               try {
@@ -427,6 +485,7 @@ public class AllParser {
                 doc = new GigaDoc(parseFile);
                 // Create the dependency output file.
                 depdoc = new GigaDoc(depsFile);
+                nerdoc = new GigaDoc(nerFile);
                 // Create the dependency output file.
                 corefdoc = new GigaDoc(corefFile);
               } catch( Exception ex ) {
@@ -460,10 +519,11 @@ public class AllParser {
 
                 doc.openStory(giga.currentStory(), storyID);
                 depdoc.openStory(giga.currentStory(), storyID);
-                analyzeSentences(giga.currentStory(), storyID, sentences, doc, depdoc, corefdoc);
+                nerdoc.openStory(giga.currentStory(), storyID);
+                analyzeSentences(giga.currentStory(), storyID, sentences, doc, depdoc, corefdoc, nerdoc);
                 doc.closeStory();
                 depdoc.closeStory();
-
+                nerdoc.closeStory();
 
                 sentences = giga.nextStory();
                 storyID++;
@@ -471,6 +531,7 @@ public class AllParser {
 
               doc.closeDoc();
               depdoc.closeDoc();
+              nerdoc.closeDoc();
             }
             numFiles++;
           }

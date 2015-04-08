@@ -2,7 +2,7 @@ package nate;
 
 /**
  * The sentence IDs are indexed from 0
- * The word spans are indexed from 1, and the end point is exclusive.
+ * The word spans are indexed from 1, and the end point is inclusive.
  */
 public class NERSpan {
   public static enum TYPE { NONE, PERSON, ORGANIZATION, LOCATION };
@@ -56,6 +56,6 @@ public class NERSpan {
   }
 
   public String toString() {
-    return type.toString() + "\t" + sid + "\t" + start + "\t" + end;
+    return type + "\t" + sid + "\t" + start + "\t" + end;
   }
 }
