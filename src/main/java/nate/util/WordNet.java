@@ -1,6 +1,5 @@
 package nate.util;
 
-import java.io.File;
 import java.io.FileInputStream;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -56,15 +55,12 @@ public class WordNet {
   }
 
   public static String findWordnetPath() {
-  	String[] paths = { "/Users/mitts/Projects/resources/nl/wordnet/jwnl13rc1/file_properties.xml",
-  			"/home/nchamber/code/lib/jwnl_file_properties.xml",
-  			"C:\\cygwin\\home\\sammy\\code\\lib\\jwnl_file_properties.xml",
-  			"/home/sammy/code/lib/jwnl_file_properties.xml",
-  			"C:\\cygwin\\home\\sammy\\code\\lib\\jwnl_file_properties.xml" };
-  	for( String path : paths )
-  		if( new File(path).exists() )
-  			return path;  	
-  	return null;
+    // Load WordNet.
+    String path = System.getenv("JWNL");
+    if( path == null ) {
+      throw new RuntimeException("ERROR: couldn't find JWNL xml properties file: " + path);
+    }     
+    return path;
   }
   
   public String hashSizes() {

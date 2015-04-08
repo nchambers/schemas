@@ -93,7 +93,7 @@ public class CountVerbDepCorefs {
       _outdir = params.get("-output");
 
     // Load WordNet.
-    _wordnet = new WordNet(params.get("-wordnet"));
+    _wordnet = new WordNet(WordNet.findWordnetPath());
 
     // Initialize count maps.
     _counts = new HashMap<String, Map<String, Count>>();
