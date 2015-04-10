@@ -38,11 +38,15 @@ The class CalculateIDF handles word counting and IDF computation.
 It inputs a directory or single file of .parse files (created from Step 1), and 
 creates two .idf files in a specified output directory. A run script is provided:
 
-./runidf.sh -outdir idfs/ someoutput/
+./runidf.sh -outdir idfs/ <parser-output-dir>
 
 You must create the output directory before running it.
 
 
 
 -----------------------------------------
-(3) Create the domain's argument counts.
+(3) Create the domain's word/dep counts.
+
+./runverbdep.sh -output depcounts -deps <parser-output-dir>/file.deps -events <parser-output-dir>/file.events -parsed <parser-output-dir>/file.parse -ner <parser-output-dir>/file.ner
+
+Creates a file in depcounts/ that contains all words with their typed dependencies, and the observed counts for these. For instance, "v-arrest" will have its own line with a bunch of counts of subjects, objects, and other relations. This will be used as a measure of a word's "importance" to your dataset.
