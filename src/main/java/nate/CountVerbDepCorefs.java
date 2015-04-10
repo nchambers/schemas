@@ -12,7 +12,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.Vector;
 
 import nate.args.CountArgumentTypes;
 import nate.reading.ProcessedData;
@@ -32,7 +31,7 @@ import edu.stanford.nlp.trees.TypedDependency;
  * token-dep counts.  It records three different counts:
  *   1. Number of documents a token-dep appeared in.
  *   2. Number of total occurrences of a token-dep.
- *   3. Number of occurrences a token-dep has a corefferent argument.
+ *   3. Number of occurrences of a token-dep with a coreferrent argument.
  * 
  * The number of times they have an argument that is coreferrent is a rough 
  * measure of how "important" or "in focus" the arguments are to documents.
@@ -89,8 +88,11 @@ public class CountVerbDepCorefs {
     if( params.hasFlag("-objects") ) _countObjectCollocations = true;
     System.out.println("objectCollocations\t" + _countObjectCollocations);
 
-    if( params.hasFlag("-output") )
+    if( params.hasFlag("-output") ) {
       _outdir = params.get("-output");
+      if( !(new File(_outdir).isDirectory()) )
+        new File(_outdir).mkdirs();
+    }
 
     // Load WordNet.
     _wordnet = new WordNet(WordNet.findWordnetPath());
@@ -176,8 +178,7 @@ public class CountVerbDepCorefs {
   /**
    * Print the verbs with their dependency-count pairs.
    */
-  private void countsToFile(Map<String,Map<String,Count>> counts, int numDocs,
-      String outfile) {
+  private void countsToFile(Map<String,Map<String,Count>> counts, int numDocs, String outfile) {
     System.out.println("Writing to file " + outfile);
     try {
       BufferedWriter out = new BufferedWriter(new FileWriter(outfile));
@@ -250,6 +251,11 @@ public class CountVerbDepCorefs {
     int sid = 0;
 
     for( List<TypedDependency> sentDeps : deps ) {
+      
+//      System.out.println("sid=" + sid);
+//      System.out.println("deps=" + sentDeps);
+//      System.out.println("tree= " + trees.get(sid));
+      
       // Get the particles.
       Map<Integer, String> particles = Ling.particlesInSentence(sentDeps);
       // Get the objects.
@@ -259,6 +265,7 @@ public class CountVerbDepCorefs {
         int depIndex = dep.dep().index();
         int govIndex = dep.gov().index();
         if( govIndex > 1000 ) govIndex -= 1000;
+        if( govIndex == 0 ) continue; // ROOT-0 dependency, skip it
         String gov = dep.gov().label().value().toString().toLowerCase();
         String reln = CountTokenPairs.normalizeRelation(dep.reln().toString(), _fullPrep);
         String govlemmakey = CountTokenPairs.buildTokenLemma(gov, govIndex, trees.get(sid), particles, _wordnet);
@@ -340,7 +347,7 @@ public class CountVerbDepCorefs {
       _numStories++;
 
       // Count the args.
-      if( _duplicates != null && !_duplicates.contains(reader.currentStory()) ) {
+      if( _duplicates == null || !_duplicates.contains(reader.currentStory()) ) {
         countCorefs(trees, reader.getDependencies(), reader.getEntities(), reader.getNER());
       }
       // Skip duplicate stories.
@@ -420,6 +427,7 @@ public class CountVerbDepCorefs {
           }
         }
       }
+      in.close();
     } catch( Exception ex ) { 
       System.out.println("Error on line: " + line);
       ex.printStackTrace(); 
@@ -526,6 +534,7 @@ public class CountVerbDepCorefs {
             System.out.println(" deps: " + deps);
             System.out.println(" parses: " + parses);
             System.out.println(" coref: " + coref);
+            System.out.println(" ner: " + ner);
 
             ProcessedData dataReader = new ProcessedData(parses, deps, coref, ner);
             countDeps(dataReader);
