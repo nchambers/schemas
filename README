@@ -50,3 +50,15 @@ You must create the output directory before running it.
 ./runverbdep.sh -output depcounts -deps <parser-output-dir>/file.deps -events <parser-output-dir>/file.events -parsed <parser-output-dir>/file.parse -ner <parser-output-dir>/file.ner
 
 Creates a file in depcounts/ that contains all words with their typed dependencies, and the observed counts for these. For instance, "v-arrest" will have its own line with a bunch of counts of subjects, objects, and other relations. This will be used as a measure of a word's "importance" to your dataset.
+
+
+-----------------------------------------
+(4) Create the domain's pair counts.
+
+./runcountpairs.sh -type vbnn -output <out-dir> -idf idfs/tokens-lemmas.idf-all -deps <domain-deps> -parsed <domain-parses>
+
+
+-----------------------------------------
+(5) Create the domain's argument counts.
+
+./runargs.sh -idf idfs/tokens-lemmas.idf-all -output <out-dir> -events <domain-events> -deps <domain-deps> -parsed <domain-parses> -ner <domain-ner>
