@@ -98,7 +98,7 @@ public class CountTokenPairs {
   Map<String,Map<String,Integer>> _countsLemmas;
   Map<String,Map<String,Float>> _countsFloat;
   Map<String,Map<String,Float>> _countsLemmasFloat;
-  IDFMap _idf;
+  IDFMap _idf; // lemma idf
   // Individual tokens must have at least this IDF to be counted in a pair.
   float _idfCutoff = 0.9f;
   // Individual tokens must appear at least this many times to be counted in a pair.
@@ -165,7 +165,7 @@ public class CountTokenPairs {
     }
     
     // Load WordNet
-    _wordnet = new WordNet(params.get("-wordnet"));
+    _wordnet = new WordNet(WordNet.findWordnetPath());
 
     // Initialize count map
     _counts = new HashMap<String, Map<String, Integer>>();
@@ -174,9 +174,10 @@ public class CountTokenPairs {
     _countsLemmasFloat = new HashMap<String, Map<String, Float>>();
 
     // Duplicate Gigaword files to ignore
-    _duplicates = GigawordDuplicates.fromFile(_duplicatesPath);
+    if( new File(_duplicatesPath).exists() )
+      _duplicates = GigawordDuplicates.fromFile(_duplicatesPath);
 
-    // IDF scores.
+    // IDF scores (lemmas)
     _idf = new IDFMap(params.get("-idf"));
 
     // Ignore list.
@@ -907,6 +908,7 @@ public class CountTokenPairs {
 //          System.out.println("dep: " + dep);
           int govindex = dep.gov().index();
           if( govindex > 1000 ) govindex -= 1000;
+          if( govindex == 0 ) continue; // ROOT-0 dependency, skip it
           if( !seen.contains(govindex) ) {
             seen.add(govindex);
             String gov = dep.gov().label().value().toString().toLowerCase();
@@ -1129,6 +1131,9 @@ public class CountTokenPairs {
    * Also attaches a particle if there is one for the token.
    */
   public static String buildTokenLemma(String token, int index, Tree tree, Map<Integer, String> particles, WordNet wordnet) {
+    if( index == 0 )
+      return null;
+    
     Tree subtree = TreeOperator.indexToSubtree(tree, index);
     if( subtree == null ) {
       System.out.println("null subtree " + token + " index " + index + " tree=" + tree);
@@ -1402,7 +1407,7 @@ public class CountTokenPairs {
     // Read the dependencies.
     while( trees != null ) {
       // Skip duplicate stories.
-      if( _duplicates.contains(reader.currentStory()) ) {
+      if( _duplicates != null && _duplicates.contains(reader.currentStory()) ) {
         System.out.println("duplicate " + reader.currentStory());
       } else {
         System.out.println(reader.currentStory());

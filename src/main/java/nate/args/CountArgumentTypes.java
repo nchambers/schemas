@@ -100,7 +100,7 @@ public class CountArgumentTypes {
     _wordnet = wordnet;
     _fullPrep = fullPrep;
     _doPairs = doPairs;
-    // Make an empty IDF map ... this is just usd in counting verb pairs to save memory.
+    // Make an empty IDF map ... this is just used in counting verb pairs to save memory.
     _idf = new IDFMap();
 
     if( _doPairs ) _pairCounts = new HashMap<String, Map<String,Integer>>();
@@ -125,7 +125,7 @@ public class CountArgumentTypes {
     System.out.println("objectCollocations\t" + _countObjectCollocations);
     
     _idf = new IDFMap(params.get("-idf"));
-    _wordnet = new WordNet(params.get("-wordnet"));
+    _wordnet = new WordNet(WordNet.findWordnetPath());
 
     if( params.hasFlag("-nopairs") )
       _doPairs = false;
@@ -144,7 +144,8 @@ public class CountArgumentTypes {
    */
   private void initLexResources() {
     // Duplicate Gigaword files to ignore
-    _duplicates = GigawordDuplicates.fromFile(_duplicatesPath);
+    if( new File(_duplicatesPath).exists() )
+      _duplicates = GigawordDuplicates.fromFile(_duplicatesPath);
 
     // Ignore List (evaluation docs)
     _ignoreList = new HashSet<String>();
@@ -210,12 +211,11 @@ public class CountArgumentTypes {
    * @param entities A list of entities that have been resolved to each other
    * @param eventVec A Vector of WordEvents seen in the entire document
    */
-  public void analyzeDocument(List<Tree> trees, List<List<TypedDependency>> alldeps,
-      List<EntityMention> entities, List<NERSpan> ners, int storyID ) {
-
+  public void analyzeDocument(List<Tree> trees, List<List<TypedDependency>> alldeps, List<EntityMention> entities, List<NERSpan> ners, int storyID ) {
     // Get all desired tokens from the document. 
     List<WordEvent> events = CountTokenPairs.extractEvents(trees, alldeps, entities, _wordnet, _tokenType, _fullPrep);
-//        for( WordEvent event : events ) System.out.println("event: " + event.toStringFull());
+    System.out.println("Processing " + events.size() + " events.");
+//    for( WordEvent event : events ) System.out.println("event: " + event.toStringFull());
 
     // Index mentions by sentence, and save all strings for each mention ID
     Map<Integer,Set<String>> entityIDToStrings = new HashMap<Integer,Set<String>>();
@@ -273,7 +273,7 @@ public class CountArgumentTypes {
       Map<Integer, String> entityIDCache, Map<Integer,Counter<NERSpan.TYPE>> entityIDToNE, int fid ) {
     // Get the arguments
     HashMap<Integer,String> args = event.arguments();
-
+//    System.out.println("COUNTING event=" + event);
     // Tally each argument
     if( args != null ) {
       for( Integer ID : args.keySet() ) {
@@ -282,6 +282,7 @@ public class CountArgumentTypes {
 
         String reln = args.get(ID);
         String slot = event.token() + ":" + reln;
+//        System.out.println("LOGGING " + slot + " " + argName);
         countSingleArgType(slot, argName);
       }
     }
@@ -660,7 +661,7 @@ public class CountArgumentTypes {
     // Read the dependencies.
     while( trees != null ) {
       // Skip duplicate stories.
-      if( _duplicates.contains(parseReader.currentStory()) ) {
+      if( _duplicates != null && _duplicates.contains(parseReader.currentStory()) ) {
         System.out.println("duplicate " + parseReader.currentStory());
       } else {
         System.out.println(parseReader.currentStory());

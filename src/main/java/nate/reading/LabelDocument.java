@@ -277,7 +277,10 @@ public class LabelDocument {
     System.out.println("domainIDF \t\t= " + _params.get("-domainidf"));
     System.out.println("generalIDF \t\t= " + _params.get("-generalidf"));
     System.out.println("initialIDF \t\t= " + _params.get("-initialidf"));
-    _wordnet = new WordNet(_params.get("-wordnet"));
+    if( _params.hasFlag("-wordnet") )
+      _wordnet = new WordNet(_params.get("-wordnet"));
+    else
+      _wordnet = new WordNet(WordNet.findWordnetPath());
     _detector = new DomainVerbDetector(_params.get("-domainidf"), _params.get("-generalidf"), _params.get("-initialidf"));
     _domainIDF = _detector._domainIDF;
     _generalIDF = _detector._generalIDF;
