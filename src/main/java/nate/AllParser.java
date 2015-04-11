@@ -293,10 +293,7 @@ public class AllParser {
     }
     // Put the entities into the doc, and save the mentions that are arguments of verbs.
     System.out.println("MYMENTIONS = " + mymentions);
-    corefdoc.openStory(currentStory, currentStoryNum);
     mapCorefToTrees(corefdoc, trees, mymentions);
-    corefdoc.closeStory();
-    
   }
 
   /**
@@ -400,10 +397,12 @@ public class AllParser {
             doc.openStory(giga.currentStory(), storyID);
             depdoc.openStory(giga.currentStory(), storyID);
             nerdoc.openStory(giga.currentStory(), storyID);
+            corefdoc.openStory(giga.currentStory(), storyID);
             analyzeSentences(giga.currentStory(), giga.currentDoc(), sentences, doc, depdoc, corefdoc, nerdoc);
             doc.closeStory();
             depdoc.closeStory();
             nerdoc.closeStory();
+            corefdoc.closeStory();
 
             sentences = giga.nextStory();
             storyID++;
