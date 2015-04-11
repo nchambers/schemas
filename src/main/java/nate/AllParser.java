@@ -519,10 +519,12 @@ public class AllParser {
                 doc.openStory(giga.currentStory(), storyID);
                 depdoc.openStory(giga.currentStory(), storyID);
                 nerdoc.openStory(giga.currentStory(), storyID);
+                corefdoc.openStory(giga.currentStory(), storyID);
                 analyzeSentences(giga.currentStory(), storyID, sentences, doc, depdoc, corefdoc, nerdoc);
                 doc.closeStory();
                 depdoc.closeStory();
                 nerdoc.closeStory();
+                corefdoc.closeStory();
 
                 sentences = giga.nextStory();
                 storyID++;
