@@ -38,10 +38,9 @@ The class CalculateIDF handles word counting and IDF computation.
 It inputs a directory or single file of .parse files (created from Step 1), and 
 creates two .idf files in a specified output directory. A run script is provided:
 
-./runidf.sh -outdir idfs/ <parser-output-dir>
+./runidf.sh -outdir domain/ <parser-output-dir>
 
 You must create the output directory before running it.
-
 
 
 -----------------------------------------
@@ -55,10 +54,16 @@ Creates a file in depcounts/ that contains all words with their typed dependenci
 -----------------------------------------
 (4) Create the domain's pair counts.
 
-./runcountpairs.sh -type vbnn -output <out-dir> -idf idfs/tokens-lemmas.idf-all -deps <domain-deps> -parsed <domain-parses>
+./runcountpairs.sh -type base -dependents -fullprep -output domain/ -idf domain/tokens-lemmas.idf -deps domain/<depsfile> -parsed domain/<parsefile>
+** rename output file to "token-pairs-base-lemmas-govdep-distlog4.counts"
+
+./runcountpairs.sh -type vbnn -dependents -fullprep -nodistance -withcoref -output domain/ -idf domain/tokens-lemmas.idf -deps domain/<depsfile> -parsed domain/<parsefile> -events domain/<eventsfile>
+** rename output file to "token-pairs-vbnn-coref-fullprep.counts"
 
 
 -----------------------------------------
 (5) Create the domain's argument counts.
 
-./runargs.sh -idf idfs/tokens-lemmas.idf-all -output <out-dir> -events <domain-events> -deps <domain-deps> -parsed <domain-parses> -ner <domain-ner>
+./runargs.sh -idf domain/tokens-lemmas.idf -output <out-dir> -events <domain-events> -deps <domain-deps> -parsed <domain-parses> -ner <domain-ner>
+
+The important output file here is argcounts-verbs.arg. Don't worry about argcounts-pairs.arg as it is not used.
