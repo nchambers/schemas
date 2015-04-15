@@ -227,10 +227,13 @@ public class LabelDocument {
     
     System.out.println("parse file: " + _params.get("-parsed"));
     _trainDataReader = new ProcessedData(_params.get("-parsed"), _params.get("-deps"), _params.get("-events"), _params.get("-ner"));
-    _test1234DataReader  = new ProcessedData(_params.get("-testparsed"), _params.get("-testdeps"), _params.get("-testevents"), _params.get("-testner"));
-    _test12DataReader  = new ProcessedData(_params.get("-test12parsed"), _params.get("-test12deps"), _params.get("-test12events"), _params.get("-test12ner"));
-    _test34DataReader  = new ProcessedData(_params.get("-test34parsed"), _params.get("-test34deps"), _params.get("-test34events"), _params.get("-test34ner"));
-    _topicsModelDir = _params.get("-topicmodel");
+    
+    if( _params.hasFlag("-testparsed") ) {
+      _test1234DataReader  = new ProcessedData(_params.get("-testparsed"), _params.get("-testdeps"), _params.get("-testevents"), _params.get("-testner"));
+      _test12DataReader  = new ProcessedData(_params.get("-test12parsed"), _params.get("-test12deps"), _params.get("-test12events"), _params.get("-test12ner"));
+      _test34DataReader  = new ProcessedData(_params.get("-test34parsed"), _params.get("-test34deps"), _params.get("-test34events"), _params.get("-test34ner"));
+    }
+    if( _params.hasFlag("-topicmodel") ) _topicsModelDir = _params.get("-topicmodel");
 //    _thesaurus = new PantelClusters(_params.get("-cbc"));
 
     if( _params.hasFlag("-evaltest") ) _evaluateOnTest = TestType.test1234;

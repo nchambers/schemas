@@ -13,11 +13,14 @@ public class Locks {
    * @param myLockDir The directory to store the files representing locks.
    */
   public static boolean getLock(String name, String myLockDir) {
+    if( !Directory.fileExists(myLockDir) )
+      new File(_lockDir).mkdir();
+
     if( !Directory.fileExists(myLockDir) ) {
       System.out.println("Locks.java error: lock directory does not exist (" + myLockDir + ")");
       return false;
     }
-    
+
     // Replace both types of slashes. Running on Windows we sometimes have Unix separators too.
     name = name.replace(File.separator, "--").replace("\\", "--").replace("/", "--");
     String path = myLockDir + File.separator + name + ".lock";
