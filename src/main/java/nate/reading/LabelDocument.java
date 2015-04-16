@@ -124,8 +124,10 @@ public class LabelDocument {
 //  PantelClusters _thesaurus;
   SlotInducer _slotInducer = null;
   NamedEntityWords _newords = null;
-  String _cachePath = "/home/nchamber/scr/cache/labeldocument";
-  String _tempOutputDir = "/home/nchamber/scr/cache/frames";
+  //String _cachePath = "/home/nchamber/scr/cache/labeldocument";
+  //String _tempOutputDir = "/home/nchamber/scr/cache/frames";
+  String _cachePath = "./cache/labeldocument";
+  String _tempOutputDir = "./cache/frames";
   double _centralTokenCutoff = 0.25;
   double _docProbCutoff = -4.35;
 
