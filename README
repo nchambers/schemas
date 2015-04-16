@@ -74,7 +74,7 @@ The important output file here is argcounts-verbs.arg. Don't worry about argcoun
 
 ./runlabeldoc.sh all vbnom 40
 
-The above clusters all verbs and nouns, and limits cluster size to 30 at most. Agglomerative clustering runs until one of the clusters reaches that size, then it stops. Lots of debug output will print. The main clustering code is in ClusterMUC.hierarchicalCluster().
+This clusters all verbs and nominal nouns, and limits cluster size to 40 at most. Agglomerative clustering runs until one of the clusters reaches that size, then it stops. Lots of debug output will print. The main clustering code is in ClusterMUC.hierarchicalCluster().
 
 Look for "Finished clustering.". The following lines will have the learned Frames printed out, one per line with a score. Many of the frames may seem unclear as to why they were learned, but you should see lots of good clusters with related events in them. If everything looks random, then something went wrong.
 
