@@ -46,7 +46,7 @@ You must create the output directory before running it.
 -----------------------------------------
 (3) Create the domain's word/dep counts.
 
-./runverbdep.sh -output depcounts -deps <parser-output-dir>/file.deps -events <parser-output-dir>/file.events -parsed <parser-output-dir>/file.parse -ner <parser-output-dir>/file.ner
+./runverbdep.sh -output domain/ -deps <parser-output-dir>/file.deps -events <parser-output-dir>/file.events -parsed <parser-output-dir>/file.parse -ner <parser-output-dir>/file.ner
 
 Creates a file in depcounts/ that contains all words with their typed dependencies, and the observed counts for these. For instance, "v-arrest" will have its own line with a bunch of counts of subjects, objects, and other relations. This will be used as a measure of a word's "importance" to your dataset.
 
@@ -67,3 +67,15 @@ Creates a file in depcounts/ that contains all words with their typed dependenci
 ./runargs.sh -idf domain/tokens-lemmas.idf -output <out-dir> -events <domain-events> -deps <domain-deps> -parsed <domain-parses> -ner <domain-ner>
 
 The important output file here is argcounts-verbs.arg. Don't worry about argcounts-pairs.arg as it is not used.
+
+
+-----------------------------------------
+(6) LEARN TEMPLATES
+
+./runlabeldoc.sh all vbnom 40
+
+The above clusters all verbs and nouns, and limits cluster size to 30 at most. Agglomerative clustering runs until one of the clusters reaches that size, then it stops. Lots of debug output will print. The main clustering code is in ClusterMUC.hierarchicalCluster().
+
+Look for "Finished clustering.". The following lines will have the learned Frames printed out, one per line with a score. Many of the frames may seem unclear as to why they were learned, but you should see lots of good clusters with related events in them. If everything looks random, then something went wrong.
+
+Look for "Going to induce slots...". This section begins the final phase that will try to learn the entity slots for the frames/templates.
