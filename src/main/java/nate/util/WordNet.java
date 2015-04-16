@@ -49,8 +49,12 @@ public class WordNet {
   public WordNet(String wordnetPath) {
     // Load WordNet
     try {
-      if( wordnetPath.length() > 0 )
+      if( wordnetPath.length() > 0 ) {
         JWNL.initialize(new FileInputStream(wordnetPath));
+        System.out.println("WordNet initialized from " + wordnetPath);
+      }
+      else
+        System.out.println("ERROR: could not find wordnetPath");
     } catch( Exception ex ) { ex.printStackTrace(); }
   }
 

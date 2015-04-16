@@ -390,6 +390,7 @@ public class StatisticsDeps {
       } //else System.out.println("skipping doc occurrence: " + word);
     }
 
+    System.out.println("keyDomainTokens tokens=" + keyTokens);
     return keyTokens;
   }
 

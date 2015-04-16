@@ -1220,11 +1220,11 @@ public class LabelDocument {
    * The SortableObject contains a score and the cluster in the form of a List of Strings.
    */
   private ReadingCluster[] clusterDomainTokens(ScoreCache cache) {
+    System.out.println("LabelDocument clusterDomainTokens() top.");
     ReadingCluster[] theclusters = (ReadingCluster[])_globalCache.get("hierclusters");
     if( theclusters == null ) {
       // Choose domain *event* words with high counts.
-      Set<String> tokensLemmas = StatisticsDeps.keyDomainTokens(_domainIDF, _generalIDF, 
-          _wordnet, _relnCountsDomain, _tokenType);
+      Set<String> tokensLemmas = StatisticsDeps.keyDomainTokens(_domainIDF, _generalIDF, _wordnet, _relnCountsDomain, _tokenType);
       // Put the set into a list form that can be indexed..
       List<String> tokenlist = Util.collectionToList(tokensLemmas);
 
