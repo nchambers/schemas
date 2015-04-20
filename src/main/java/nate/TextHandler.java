@@ -67,7 +67,6 @@ public class TextHandler implements DocumentHandler {
    * rough separators, and append everything else.
    */  
   public Vector<String> nextStory(boolean keepLineBreaks) {
-    StringBuffer sb = new StringBuffer();
     _currentDoc++;
     Vector<String> paragraphs = null;
 
@@ -75,14 +74,14 @@ public class TextHandler implements DocumentHandler {
       paragraphs = new Vector<String>();
 
       try {
-        String line;
+        String line = "";
 
         while ( (line = _in.readLine()) != null ) {
           // Skip empty lines.
           while( line != null && line.matches("^\\s*$") )
             line = _in.readLine();
 
-          if( line != null && line.length() > 0 )
+          if( line != null && line.trim().length() > 0 )
             paragraphs.add(line.trim());
         }
 
