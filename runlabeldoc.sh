@@ -3,7 +3,7 @@
 
 
 # Extra memory for java.
-export MAVEN_OPTS="-Xmx1800m"
+export MAVEN_OPTS="-Xmx3000m"
 
 
 if test -z "$3"; then
