@@ -2107,6 +2107,7 @@ public class LabelDocument {
    * @param cache Pairwise scores between slots, used to find nearby slots.
    */
   private void induceSlotsFully(Frame[] frames, Set<String> keyTokens, ScoreCache cache) {
+      System.out.println("induceSlotsFully with " + frames.length + " frames.");
     for( Frame frame : frames ) {
       if( Locks.getLock("induceslots-frame-" + frame.getID()) ) {
         System.out.println("Reinducing frame: " + frame.getID());
@@ -2130,8 +2131,10 @@ public class LabelDocument {
   }
 
   private void continueOrQuit() {
-    if( !Locks.getLock("induceslots-continue") )
+    if( !Locks.getLock("induceslots-continue") ) {
+      System.out.println("continueOrQuit quitting...");
       System.exit(0);
+    }
   }
 
   private void induceSlots(Frame frame) {

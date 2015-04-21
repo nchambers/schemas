@@ -13,8 +13,10 @@ public class Locks {
    * @param myLockDir The directory to store the files representing locks.
    */
   public static boolean getLock(String name, String myLockDir) {
-    if( !Directory.fileExists(myLockDir) )
+    if( !Directory.fileExists(myLockDir) ) {
+	System.out.println("Locks.java creating directory " + myLockDir);
       new File(_lockDir).mkdir();
+      }
 
     if( !Directory.fileExists(myLockDir) ) {
       System.out.println("Locks.java error: lock directory does not exist (" + myLockDir + ")");
@@ -32,6 +34,8 @@ public class Locks {
         boolean created = fileLock.createNewFile();
         if( created )
           return true;
+	else
+	  System.out.println("ERROR: Locks.java couldn't create the new file " + path);
       } catch( Exception ex ) {
       	System.out.println("ERROR: couldn't obtain the lock with file " + path);
       	ex.printStackTrace(); 
