@@ -68,7 +68,6 @@ public class AllParser {
   String _outputDir = ".";
   String _serializedGrammar;
   Options options;
-  LexicalizedParser parser;
   GrammaticalStructureFactory gsf;
   // One file name to continue parsing.
   // Usually the previous run was interrupted.
@@ -94,10 +93,6 @@ public class AllParser {
   private void handleParameters(String[] args) {
     HandleParameters params = new HandleParameters(args);
 
-    if( params.hasFlag("-grammar") )
-      _serializedGrammar = params.get("-grammar");
-    else _serializedGrammar = findGrammar();
-    
     if( params.hasFlag("-continue") ) {
       _continueFile = params.get("-continue");
       System.out.println("Continuing on file " + _continueFile);
@@ -112,21 +107,6 @@ public class AllParser {
     System.out.println("Grammar " + _serializedGrammar);
 
     _dataPath = args[args.length - 1];
-  }
-
-  private String findGrammar() {
-    if( Directory.fileExists("/home/nchamber/code/resources/englishPCFG.ser.gz") )
-      return "/home/nchamber/code/resources/englishPCFG.ser.gz";
-    if( Directory.fileExists("/home/sammy/code/resources/englishPCFG.ser.gz") )
-      return "/home/sammy/code/resources/englishPCFG.ser.gz";
-    if( Directory.fileExists("C:\\cygwin\\home\\sammy\\code\\resources\\englishPCFG.ser.gz") )
-      return "C:\\cygwin\\home\\sammy\\code\\resources\\englishPCFG.ser.gz";
-    if( Directory.fileExists("englishPCFG.ser.gz") )
-      return "englishPCFG.ser.gz";
-    if( Directory.fileExists("C:\\GATE_Developer_7.1\\plugins\\Parser_Stanford\\resources\\englishPCFG.ser.gz") )
-      return "C:\\GATE_Developer_7.1\\plugins\\Parser_Stanford\\resources\\englishPCFG.ser.gz";
-    System.out.println("WARNING (DirectoryParser): grammar englishPCFG.ser.gz not found!");
-    return null;
   }
   
   public static int docTypeToInt(String str) {
@@ -154,9 +134,6 @@ public class AllParser {
     try {
       options = new Options();
       options.testOptions.verbose = true;
-      // Parser
-      parser = LexicalizedParser.loadModel(_serializedGrammar);
-      //parser = new LexicalizedParser(_serializedGrammar, options);
     } catch( Exception ex ) { ex.printStackTrace(); }
 
     // Dependency tree info
