@@ -3,7 +3,7 @@
 
 
 # Extra memory for java.
-export MAVEN_OPTS="-Xmx1800m"
+export MAVEN_OPTS="-Xmx3000m"
 
 
 if test -z "$3"; then
@@ -43,4 +43,4 @@ if (( $# > 0 )); then
 fi
 
 
-mvn.bat exec:java -Dexec.mainClass=nate.reading.LabelDocument -Dexec.args="$args"
+mvn exec:java -Dexec.mainClass=nate.reading.LabelDocument -Dexec.args="$args"
