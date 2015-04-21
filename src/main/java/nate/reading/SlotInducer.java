@@ -1630,7 +1630,9 @@ public class SlotInducer {
     
     // Save the argument heads that occur often enough.
     List<String> topFreqArgs = new ArrayList<String>();
-    int cutoff = 50 + ((idf.numDocs() / 2000) * 25);
+    // 50 was used with IR counts. Using only domain should be much smaller...
+//    int cutoff = 50 + ((idf.numDocs() / 2000) * 25);
+    int cutoff = 5 + ((idf.numDocs() / 2000) * 25);
     for( String freq : frequentArgs )
       if( argCounts.get(freq) > cutoff )
         if( !Ling.isCapitalized(freq) && freq.charAt(0) != '*' )

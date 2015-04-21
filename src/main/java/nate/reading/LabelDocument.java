@@ -2472,34 +2472,6 @@ public class LabelDocument {
   }
   
   /**
-   * HASN'T YET BEEN TESTED
-   */
-  public ScoredFrame[] labelDocumentWithSimilarityVectors(ProcessedDocument doc, Frame[] frames,
-      ScoreCache cache, WordNet wordnet, IDFMap generalIDF, IDFMap domainIDF, int tokenType, boolean includeDependents, boolean requireMembership) {
-    Map<String,Integer> tokenCounts = new HashMap<String,Integer>();
-    
-    // Get the key tokens.
-    boolean includeCollocationObjects = true;
-    List<List<String>> sentTokens = ClusterMUC.getKeyTokensInDocument(doc, wordnet, generalIDF, domainIDF, CountTokenPairs.BASE, includeDependents, includeCollocationObjects);
-    for( List<String> tokens : sentTokens ) 
-      for( String token : tokens ) 
-        Util.incrementCount(tokenCounts, token, 1);
-    
-    ScoredFrame[] scoredFrames = new ScoredFrame[frames.length];
-    int i = 0;
-    for( Frame frame : frames ) {
-      Map<String,Integer> frameVector = _frameIRCounts.get(frame.getID()).idf().getFrequencyVector(10);
-      double cosine = Dimensional.cosineInteger(frameVector, tokenCounts);
-//      System.out.println("simvec " + frame.getID() + " cosine " + cosine);
-      scoredFrames[i++] = new ScoredFrame(cosine, frame);
-    }
-    
-    Arrays.sort(scoredFrames);
-    return scoredFrames;
-  }
-  
-  
-  /**
    * Use clusters of the domain words (compute if not in the global cache)
    * to identify subpassages relevant to particular clusters.
    * Extract the entities associated with each cluster.
