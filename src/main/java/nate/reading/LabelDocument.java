@@ -2112,7 +2112,7 @@ public class LabelDocument {
       if( Locks.getLock("induceslots-frame-" + frame.getID()) ) {
         System.out.println("Reinducing frame: " + frame.getID());
         frame.clearRoles();
-        induceSlots(frame);
+        induceSlots(frame, cache);
         System.out.println("Done initial frame: " + frame.toString(25, true));
         mergeSlots(frame);
         System.out.println("Remerged frame: " + frame.toString(25, true));
@@ -2137,7 +2137,7 @@ public class LabelDocument {
     }
   }
 
-  private void induceSlots(Frame frame) {
+  private void induceSlots(Frame frame, ScoreCache cache) {
     if( _slotInducer != null ) {
       if( frame.getRoles() == null ) {
       //            frame.tokens().contains("v-explode") || frame.tokens().contains("v-kidnap") || frame.tokens().contains("v-intensify") ) {
@@ -2148,13 +2148,14 @@ public class LabelDocument {
 
         // Get nearby words for kidnap and bombing.
         Map<String,Double> nearby = null;
-        ScoreCache irCache = getCacheForFrame(frame, null);
+        ScoreCache irCache = getCacheForFrame(frame, cache);
         if( irCache != null ) {
           Set<String> keyTokens = StatisticsDeps.keyDomainTokens(_domainIDF, _generalIDF, _wordnet, _relnCountsDomain, _tokenType);
           nearby = getNearbyWordsPrecise(frame, keyTokens, irCache, 100, false);
           // Remove tokens that aren't key to the MUC documents.
           //          keepKeyDomainTokens(nearby);
-        }        
+        } 
+        
 
         _slotInducer.induceSlots(frame, (nearby != null ? nearby.keySet() : null));
         _slotInducer.forceTriggersInSlots(frame);
@@ -2188,7 +2189,7 @@ public class LabelDocument {
         frames[topicid] = frame;
       }
       // Induce the semantic roles (slots) --- only process the key templates, save time...
-      for( Frame frame : frames ) induceSlots(frame);
+      for( Frame frame : frames ) induceSlots(frame, null);
     }    
 
     // Extract document topics.
