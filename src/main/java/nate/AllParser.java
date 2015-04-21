@@ -79,7 +79,7 @@ public class AllParser {
   public static final int MUC = 2;
   public static final int TEXT = 3;
   
-  private int _docType = GIGAWORD;
+  private int _docType = TEXT;
 
 
   public AllParser(String[] args) {
@@ -117,15 +117,15 @@ public class AllParser {
   private String findGrammar() {
     if( Directory.fileExists("/home/nchamber/code/resources/englishPCFG.ser.gz") )
       return "/home/nchamber/code/resources/englishPCFG.ser.gz";
-    if( Directory.fileExists("/Users/mitts/Projects/stanford/stanford-parser/englishPCFG.ser.gz") )
-      return "/Users/mitts/Projects/stanford/stanford-parser/englishPCFG.ser.gz";
     if( Directory.fileExists("/home/sammy/code/resources/englishPCFG.ser.gz") )
       return "/home/sammy/code/resources/englishPCFG.ser.gz";
     if( Directory.fileExists("C:\\cygwin\\home\\sammy\\code\\resources\\englishPCFG.ser.gz") )
       return "C:\\cygwin\\home\\sammy\\code\\resources\\englishPCFG.ser.gz";
     if( Directory.fileExists("englishPCFG.ser.gz") )
       return "englishPCFG.ser.gz";
-    else System.out.println("WARNING (DirectoryParser): grammar englishPCFG.ser.gz not found!");
+    if( Directory.fileExists("C:\\GATE_Developer_7.1\\plugins\\Parser_Stanford\\resources\\englishPCFG.ser.gz") )
+      return "C:\\GATE_Developer_7.1\\plugins\\Parser_Stanford\\resources\\englishPCFG.ser.gz";
+    System.out.println("WARNING (DirectoryParser): grammar englishPCFG.ser.gz not found!");
     return null;
   }
   
@@ -193,7 +193,7 @@ public class AllParser {
       pipeline.annotate(document);
     } catch( Exception ex ) {
       ex.printStackTrace();
-      System.out.println("ERROR: skipping this document due to Stanford CoreNLP failure.");
+      System.out.println("ERROR: skipping document due to Stanford CoreNLP failure.");
       return;
     }
 
@@ -391,7 +391,7 @@ public class AllParser {
 
           // Process the remaining sentences
           int storyID = stoppedNum + 1;
-          while( sentences != null ) {
+          while( sentences != null && sentences.size() > 0 ) {
             System.out.println(giga.currentDoc() + "/" + giga.numDocs() + " " + giga.currentStory());
 
             doc.openStory(giga.currentStory(), storyID);
@@ -449,7 +449,7 @@ public class AllParser {
 
       File dir = new File(_dataPath);
       if( dir.isDirectory() ) {
-        String files[] = dir.list();
+        String files[] = Directory.getFilesSorted(_dataPath);
 
         // Special handling of a continuation parse.
         if( _continueFile != null ) {
@@ -507,8 +507,10 @@ public class AllParser {
               // Read the documents in the text file.               else if( _docType == MUC )
 //              giga = new MUCHandler(_dataPath + File.separator + file);
               Vector<String> sentences = giga.nextStory();
+              System.out.println("Allparser: got " + sentences);
               int storyID = 0;
-              while( sentences != null ) {
+              while( sentences != null && sentences.size() > 0 ) {
+                System.out.println("in the while loop for " + file);
                 numDocs++;
                 System.out.println(numDocs + ": (" + giga.currentDoc() + "/" + giga.numDocs() + ") " + giga.currentStory());
                 if( numDocs % 100 == 0 ) Util.reportMemory();
