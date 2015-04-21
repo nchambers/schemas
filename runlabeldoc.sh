@@ -28,10 +28,9 @@ muckey=../corpora/muc34/TASK/CORPORA/key-$DOMAIN.muc4
 
 #corpuspmi=pattern-nyt.mi.ordered
 corpuspmi=pattern-muc-gigasearched.mi.ordered
-
 domainpmi=pattern-muc-gigasearched.mi.ordered
 
-CLASSPATH=$CLASSPATH:/user/natec/lib/opennlp-tools-1.3.0.jar:/user/natec/resources/opennlp-tools-1.3.0/lib/maxent-2.4.0.jar:/user/natec/resources/opennlp-tools-1.3.0/lib/trove.jar
+#CLASSPATH=$CLASSPATH:/user/natec/lib/opennlp-tools-1.3.0.jar:/user/natec/resources/opennlp-tools-1.3.0/lib/maxent-2.4.0.jar:/user/natec/resources/opennlp-tools-1.3.0/lib/trove.jar
 
 dict=/u/nlp/rte/resources/lex/WordNet-3.0/dict
 wordnet=./jwnl_file_properties.xml
