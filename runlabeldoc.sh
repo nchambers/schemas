@@ -43,4 +43,4 @@ if (( $# > 0 )); then
 fi
 
 
-mvn.bat exec:java -Dexec.mainClass=nate.reading.LabelDocument -Dexec.args="$args"
+mvn exec:java -Dexec.mainClass=nate.reading.LabelDocument -Dexec.args="$args"

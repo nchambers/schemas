@@ -306,10 +306,31 @@ public class SlotInducer {
     }
     System.out.println("Learned Alternations numverbs = " + _alternations.size());
   }
+
+    private VerbArgCounts getIRArgCounts(int frameid) {
+	if( _frameIRCounts != null && _frameIRCounts.containsKey(frameid) )
+	    return _frameIRCounts.get(frameid).slotArgCounts();
+	else
+	    return _domainSlotArgCounts;
+    }
+
+    private CountTokenPairs getIRCorefCounts(int frameid) {
+	if( _frameIRCounts != null && _frameIRCounts.containsKey(frameid) )
+	    return _frameIRCounts.get(frameid).pairCorefCounts();
+	else
+	    return _domainCorefPairs;
+    }
+
+    private IDFMap getIRIDF(int frameid) {
+	if( _frameIRCounts != null && _frameIRCounts.containsKey(frameid) )
+	    return _frameIRCounts.get(frameid).idf();
+	else
+	    return _domainIDF;
+    }
   
   private void setAlternations(Frame frame) {
     System.out.println("Set alternations top.");
-    VerbArgCounts argcounts = _frameIRCounts.get(frame.getID()).slotArgCounts();
+    VerbArgCounts argcounts = getIRArgCounts(frame.getID());
     learnAlternations(argcounts);
     
 //    System.out.println("*Altered v-blow_up:s " + argcounts.getArgsForSlot("v-blow_up:s"));
@@ -471,8 +492,7 @@ public class SlotInducer {
     
     // Set the IR counts if relevant to this frame.
     VerbArgCounts domainArgCounts = _domainSlotArgCounts;
-    if( _frameIRCounts != null && _frameIRCounts.containsKey(frame.getID()) )
-      domainArgCounts = _frameIRCounts.get(frame.getID()).slotArgCounts();
+    domainArgCounts = getIRArgCounts(frame.getID());
 //    if( frame.contains("v-kidnap") ) domainArgCounts = _kidnapIRSlotArgCounts;
 //    else if( frame.contains("v-explode") ) domainArgCounts = _bombingIRSlotArgCounts;
     
@@ -833,10 +853,11 @@ public class SlotInducer {
       CountTokenPairs corefs = _frameIRCounts.get(frameid).pairCorefCounts();
       if( argcounts != null ) domainSlotArgCounts = argcounts;
       if( corefs != null ) domainCorefPairs = corefs;
-    } else {
-      System.err.println("IR lookup failed for frame " + frameid);
-      System.exit(-1);
     }
+ // else {
+ //      System.err.println("IR lookup failed for frame " + frameid);
+ //      System.exit(-1);
+ //    }
     
 //    if( _kidnapIRSlotArgCounts != null && tokens.contains("v-kidnap") ) {
 //      domainSlotArgCounts = _kidnapIRSlotArgCounts;
@@ -1307,7 +1328,8 @@ public class SlotInducer {
     mergeRoles(frame, cutoff, null);
   }
   private void mergeRoles(Frame frame, double cutoff, Map<FrameRole.TYPE, ScoreCache> caches) {
-    VerbArgCounts argCounts = _frameIRCounts.get(frame.getID()).slotArgCounts();
+      //    VerbArgCounts argCounts = _frameIRCounts.get(frame.getID()).slotArgCounts();
+    VerbArgCounts argCounts = getIRArgCounts(frame.getID());
     
     List<FrameRole> roles = frame.getRoles();
     if( roles != null ) {
@@ -1414,8 +1436,7 @@ public class SlotInducer {
     // Reconstruct the clusters.
     System.out.println("Slot Clusters!");
 //    Collection<Set<Integer>> clusters = ClusterUtil.reconstructClusters(mergeHistory, slots, 1);
-    Collection<Set<Integer>> clusters = reconstructClusters(mergeHistory, slots, 1, 0, 
-        _frameIRCounts.get(frame.getID()).pairCorefCounts(), _frameIRCounts.get(frame.getID()).slotArgCounts(), type);
+    Collection<Set<Integer>> clusters = reconstructClusters(mergeHistory, slots, 1, 0, getIRCorefCounts(frame.getID()), getIRArgCounts(frame.getID()), type);
     
     // Add each cluster as a role.
     System.out.println("Final Slot Clusters!");
@@ -1504,9 +1525,7 @@ public class SlotInducer {
    */
   private List<String> filterLowOccurringSlots(int frameid, List<String> slots, int cutoff) {
     List<String> subset = new ArrayList<String>();
-    VerbArgCounts argcounts = null;
-    if( _frameIRCounts != null && _frameIRCounts.containsKey(frameid) )
-      argcounts = _frameIRCounts.get(frameid).slotArgCounts();
+    VerbArgCounts argcounts = getIRArgCounts(frameid);
       
     for( String slot : slots ) {
 
@@ -1547,9 +1566,7 @@ public class SlotInducer {
   
   private EventPairScores buildArgScoreCache(int frameid, List<String> args) {
     // Get the slot/arg counts for this frame.
-    VerbArgCounts slotargcounts = null;
-    if( _frameIRCounts != null && _frameIRCounts.containsKey(frameid) )
-      slotargcounts = _frameIRCounts.get(frameid).slotArgCounts();
+      VerbArgCounts slotargcounts = getIRArgCounts(frameid);
     
     EventPairScores cache = new EventPairScores();
     
@@ -1595,12 +1612,8 @@ public class SlotInducer {
    * @param slots The slots from the frame that we think are most important.
    */
   private void createArgumentSimilarityClasses(int frameid, List<String> slots) {
-    VerbArgCounts slotargcounts = null;
-    IDFMap idf = _domainIDF;
-    if( _frameIRCounts != null && _frameIRCounts.containsKey(frameid) ) {
-      slotargcounts = _frameIRCounts.get(frameid).slotArgCounts();
-      idf = _frameIRCounts.get(frameid).idf();
-    }
+      VerbArgCounts slotargcounts = getIRArgCounts(frameid);
+      IDFMap idf = getIRIDF(frameid);
     
     // Count all arguments in all given slots.
     Map<String,Integer> argCounts = new HashMap<String,Integer>();
@@ -1645,9 +1658,7 @@ public class SlotInducer {
   
   // DEBUGGING
   private void topArgSlotSimilarity(int frameid, List<String> slots) {
-    VerbArgCounts argcounts = null;
-    if( _frameIRCounts != null && _frameIRCounts.containsKey(frameid) )
-      argcounts = _frameIRCounts.get(frameid).slotArgCounts();
+      VerbArgCounts argcounts = getIRArgCounts(frameid);
 
     for( int i = 0; i < slots.size()-1; i++ ) {
       Map<String,Double> disti = Dimensional.normalizeInt(argcounts.getArgsForSlot(slots.get(i)));
@@ -1703,7 +1714,10 @@ public class SlotInducer {
       System.out.println("constraint: " + pair);
     
     System.out.println("induceSlots slots:\t" + slots);
-    int cutoff = 50 + ((_frameIRCounts.get(frame.getID()).idf().numDocs() / 1000) * 30);
+    // ACL 2011 paper had the following commented line:
+    //    int cutoff = 50 + ((_frameIRCounts.get(frame.getID()).idf().numDocs() / 1000) * 30);
+    // Without an IR stage:
+    int cutoff = 10 + 30 * getIRIDF(frame.getID()).numDocs() / 1000;
     slots = filterLowOccurringSlots(frame.getID(), slots, cutoff);
 //    slots = filterLowOccurringSlots(frame.getID(), slots, 250);
     System.out.println("filtered slots:\t" + slots);
@@ -1737,7 +1751,7 @@ public class SlotInducer {
       EventPairScores cache = buildScoreCache(frame.getID(), targetTokens, slots, roleType, true);
       List<Triple> history = clusterer.efficientCluster(slots, cache, ClusterUtil.NEW_LINK_WITH_CONNECTION_PENALTY, clusterConstraints);
       if( frame.tokens().contains("v-kidnap") || frame.tokens().contains("v-explode") || frame.tokens().contains("v-kill") )
-        reconstructClusters(history, slots, 1, 0, _frameIRCounts.get(frame.getID()).pairCorefCounts(), _frameIRCounts.get(frame.getID()).slotArgCounts(), roleType);
+	reconstructClusters(history, slots, 1, 0, getIRCorefCounts(frame.getID()), getIRArgCounts(frame.getID()), roleType);
 //      history = trimHistory(history, _frameIRCounts.get(frame.getID())._slotArgCounts);
       // Merge more?
 //      debugClusters(roleType, history, slots, cache);

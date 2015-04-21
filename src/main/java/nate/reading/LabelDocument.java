@@ -2315,6 +2315,8 @@ public class LabelDocument {
   
   private void writeFrameToFile(Frame frame) {
     try {
+	if( !Directory.fileExists(_tempOutputDir) )
+	    Directory.createDirectory(_tempOutputDir);
       String outpath = makeCachePath(_tempOutputDir + File.separator + "frame" + frame.getID());
       System.out.println("Writing frame " + frame.getID() + " to disk: " + outpath);
       PrintWriter writer = new PrintWriter(new BufferedWriter(new FileWriter(outpath, false)));
