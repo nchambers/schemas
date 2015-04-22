@@ -72,7 +72,7 @@ The important output file here is argcounts-verbs.arg. Don't worry about argcoun
 -----------------------------------------
 (6) LEARN TEMPLATES
 
-./runlabeldoc.sh all vbnom 40
+./runlabeldoc.sh vbnom 40
 
 This clusters all verbs and nominal nouns, and limits cluster size to 40 at most. Agglomerative clustering runs until one of the clusters reaches that size, then it stops. Lots of debug output will print. The main clustering code is in ClusterMUC.hierarchicalCluster().
 

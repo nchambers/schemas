@@ -1,36 +1,27 @@
 #!/bin/bash
 #
 
+# Remove locks (only needed if doing expensive IR stuff)
+rm locks/*
 
 # Extra memory for java.
 export MAVEN_OPTS="-Xmx3000m"
 
 
 if test -z "$3"; then
-    echo "runlabeldoc.sh <domain> <token-type> <max-cluster-size>"
+    echo "runlabeldoc.sh <token-type> <max-cluster-size>"
     exit
 fi
 
-# all, kidnap, bombing, attack
-DOMAIN=$1
 # base, vb, nn, vbnn, vbnom
-clustertype=$2
+clustertype=$1
 # size of max cluster (e.g. 30)
-clustersize=$3
+clustersize=$2
 
 shift
 shift
 shift
 shift
-
-muckey=../corpora/muc34/TASK/CORPORA/key-$DOMAIN.muc4
-#muckey=../corpora/muc34/TASK/CORPORA/dev/key-dev-0001.muc4
-
-#corpuspmi=pattern-nyt.mi.ordered
-corpuspmi=pattern-muc-gigasearched.mi.ordered
-domainpmi=pattern-muc-gigasearched.mi.ordered
-
-#CLASSPATH=$CLASSPATH:/user/natec/lib/opennlp-tools-1.3.0.jar:/user/natec/resources/opennlp-tools-1.3.0/lib/maxent-2.4.0.jar:/user/natec/resources/opennlp-tools-1.3.0/lib/trove.jar
 
 dict=/u/nlp/rte/resources/lex/WordNet-3.0/dict
 wordnet=./jwnl_file_properties.xml
@@ -42,4 +33,4 @@ if (( $# > 0 )); then
 fi
 
 
-mvn exec:java -Dexec.mainClass=nate.reading.LabelDocument -Dexec.args="$args"
+mvn.bat exec:java -Dexec.mainClass=nate.reading.LabelDocument -Dexec.args="$args"
