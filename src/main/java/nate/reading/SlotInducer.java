@@ -1753,10 +1753,10 @@ public class SlotInducer {
       EventPairScores cache = buildScoreCache(frame.getID(), targetTokens, slots, roleType, true);
       List<Triple> history = clusterer.efficientCluster(slots, cache, ClusterUtil.NEW_LINK_WITH_CONNECTION_PENALTY, clusterConstraints);
       if( frame.tokens().contains("v-kidnap") || frame.tokens().contains("v-explode") || frame.tokens().contains("v-kill") )
-	reconstructClusters(history, slots, 1, 0, getIRCorefCounts(frame.getID()), getIRArgCounts(frame.getID()), roleType);
-//      history = trimHistory(history, _frameIRCounts.get(frame.getID())._slotArgCounts);
+        reconstructClusters(history, slots, 1, 0, getIRCorefCounts(frame.getID()), getIRArgCounts(frame.getID()), roleType);
+      //      history = trimHistory(history, _frameIRCounts.get(frame.getID())._slotArgCounts);
       // Merge more?
-//      debugClusters(roleType, history, slots, cache);
+      //      debugClusters(roleType, history, slots, cache);
       // Reconstruct the cluster and add to the frame.
       addClustersAsRoles(roleType, history, slots, args, frame);
     }

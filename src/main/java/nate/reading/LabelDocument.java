@@ -2319,7 +2319,7 @@ public class LabelDocument {
   
   private void writeFrameToFile(Frame frame) {
     try {
-      // Create the output directories if they aren't yet created.
+      // Create the output directories if they aren't there.
       if( !Directory.fileExists(_tempOutputDir) )
         new File(_tempOutputDir).mkdirs();
 

@@ -79,3 +79,5 @@ This clusters all verbs and nominal nouns, and limits cluster size to 40 at most
 Look for "Finished clustering.". The following lines will have the learned Frames printed out, one per line with a score. Many of the frames may seem unclear as to why they were learned, but you should see lots of good clusters with related events in them. If everything looks random, then something went wrong.
 
 Look for "Going to induce slots...". This section begins the final phase that will try to learn the entity slots for the frames/templates.
+
+"Induce slots for type PERSON" is in the output, showing where the first slots are clustered.
