@@ -1,16 +1,22 @@
+Overview
+-------------
+
+This code is partially from the paper: Chambers and Jurafsky, Template-Based Information Extraction without the Templates, 2011 ACL.
+
+It has been moved and refactored a bit, so performance is not the same as the original paper.
+
 
 Prerequisites
 -------------
 
-CAEVO uses the WordNet dictionaries. The dictionary files can be
+This code relies on the WordNet dictionaries. The dictionary files can be
 downloaded from:
 
     http://wordnetcode.princeton.edu/wn3.1.dict.tar.gz
 
 You also need a jwnl_file_properties.xml file that points to the location of
 your downloaded dictionary. The dictionary and this file can be stored anywhere
-on your drive. CAEVO looks for an environment variable JWNL that should have the
-path to the xml file.
+on your drive. The code looks for an environment variable JWNL that should have the path to the xml file.
 
 
 CODE EXECUTION STEPS
