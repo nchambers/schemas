@@ -2,12 +2,13 @@ package nate.reading;
 
 import java.util.List;
 
+
 //import edu.stanford.nlp.ie.temporal.timebank.Util;
 import edu.stanford.nlp.trees.Tree;
 import edu.stanford.nlp.trees.TypedDependency;
-
 import nate.EntityMention;
 import nate.NERSpan;
+import nate.util.TreeOperator;
 import nate.util.Util;
 
 public class ProcessedDocument {
@@ -26,11 +27,11 @@ public class ProcessedDocument {
   }
   
   public List<Tree> trees() {
-    System.out.println("ERROR (ProcessedDocument.java): this used to work, but on older CoreNLP. Update code if this is actually used.");
-    System.exit(1);
-//    if( parses != null )
-//      return Util.stringsToTrees(parses);
-//    else return null;
-    return null;
+//    System.out.println("ERROR (ProcessedDocument.java): this used to work, but on older CoreNLP. Update code if this is actually used.");
+//    System.exit(1);
+    if( parses != null )
+      return TreeOperator.stringsToTrees(parses);
+    else return null;
+
   }
 }

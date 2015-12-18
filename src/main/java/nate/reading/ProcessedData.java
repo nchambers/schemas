@@ -1,10 +1,10 @@
 package nate.reading;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Vector;
 
 import edu.stanford.nlp.trees.TypedDependency;
-
 import nate.EntityMention;
 import nate.GigaDocReader;
 import nate.GigawordHandler;
@@ -120,7 +120,18 @@ public class ProcessedData {
   public ProcessedDocument getDocument() {
     return new ProcessedDocument(_parseReader.currentStory(), getParseStrings(), getDependencies(), getEntities(), getNER());
   }
-  
+
+  /**
+   * If you need to keep this around, clone all the values because they get cleared destructively otherwise.
+   */
+  public ProcessedDocument getDocumentCloned() {
+    return new ProcessedDocument(_parseReader.currentStory(), 
+        getParseStrings(), 
+        new ArrayList<>(getDependencies()), 
+        new ArrayList<>(getEntities()), 
+        new ArrayList<>(getNER()));
+  }
+
   public List<NERSpan> getNER() {
     if( _nerReader != null )
       return _nerReader.getNER();
