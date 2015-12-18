@@ -103,7 +103,7 @@ public class GigawordHandler implements DocumentHandler {
       try {
         String line;
         while ( (line = in.readLine()) != null ) {
-
+        	
           // find the doc line of the next "story"
           if ( !line.startsWith("<DOC ") || line.indexOf("type=\"story") < 0 ) continue;
           int namestart = line.indexOf('"')+1;
@@ -151,11 +151,12 @@ public class GigawordHandler implements DocumentHandler {
                 // ** RETURN from the function! **
                 return paragraphs;
               }
-              // new paragraph
+              // new paragraph (assumes the <P> tag is on a line by itself)
               if( line.startsWith("<P>") || line.startsWith("<SENT") || line.startsWith("<S>") ) {
                 continuing = false;
                 int trim = sb.length();
                 while( trim > 0 && Character.isSpaceChar(sb.charAt(trim-1)) ) trim--;
+
                 if( trim > 0 ) paragraphs.add(sb.substring(0,trim));
                 // reset the buffer
                 sb.setLength(0);
