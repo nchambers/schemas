@@ -7,7 +7,7 @@ import java.util.List;
 import java.util.ArrayList;
 
 /**
- * Holds a list of ordered sentences in a story.
+ * Holds a list of Stories (a story is a list of ordered sentences in a story).
  * Reads stories from an excel dump, one story per line.
  *
  * LINE FORMAT: storyID, workerID, storyTitle, sent0, sent1, ..., sent4
