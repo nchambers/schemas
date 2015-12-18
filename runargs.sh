@@ -14,4 +14,4 @@ if (( $# > 0 )); then
 fi
 
 
-mvn.bat exec:java -Dexec.mainClass=nate.args.CountArgumentTypes -Dexec.args="$args"
+mvn exec:java -Dexec.mainClass=nate.args.CountArgumentTypes -Dexec.args="$args"
