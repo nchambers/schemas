@@ -1,5 +1,13 @@
 #!/usr/bin/perl -w
 #
+# Works on the dev set for version 3.
+# Expected line format:
+# Id      InputStoryid    InputSentence1  InputSentence2  InputSentence3  InputSentence4  RandomFifthSentenceQuiz1        RandomFifthSentenceQuiz2        AnswerRightEnding
+#
+# Version 1 is missing column 2 that is in version 3, so this 
+# doesn't work on version 1 anymore. Just change indices if 
+# you need it.
+#
 
 my $file = $ARGV[0];
 
@@ -37,7 +45,7 @@ while( $line = <IN> ) {
     print OUT "<TEXT>\n";
     for( my $i = 0; $i < 5; $i++ ) {
 	print OUT "<P>\n";
-	print OUT $parts[1+$i] . "\n";
+	print OUT $parts[2+$i] . "\n";
 	print OUT "</P>\n";
     }
     print OUT "</TEXT>\n</DOC>\n";
@@ -47,11 +55,11 @@ while( $line = <IN> ) {
     print OUT "<TEXT>\n";
     for( my $i = 0; $i < 4; $i++ ) {
 	print OUT "<P>\n";
-	print OUT $parts[1+$i] . "\n";
+	print OUT $parts[2+$i] . "\n";
 	print OUT "</P>\n";
     }
     print OUT "<P>\n";
-    print OUT $parts[6] . "\n";
+    print OUT $parts[7] . "\n";
     print OUT "</P>\n";
     print OUT "</TEXT>\n</DOC>\n";
 }
