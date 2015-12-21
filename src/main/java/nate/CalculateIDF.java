@@ -285,7 +285,8 @@ public class CalculateIDF {
         if( !file.startsWith(".") && file.contains("parse") &&
             (file.endsWith(".gz") || file.endsWith(".parse")) ) {
           String year = file.substring(8,12);
-          String month = file.substring(12,14);
+          String month = "";
+          if( file.length() > 14 ) file.substring(12,14);
           System.out.println("file: " + file);
 
           // Open the file
