@@ -158,6 +158,14 @@ public class CountTokenPairs {
       System.exit(-1);
     }
     
+    if( params.hasFlag("-idfcut") ) 
+      _idfCutoff = Float.parseFloat(params.get("-idfcut"));
+    System.out.println("idfcut\t" + _idfCutoff);
+
+    if( params.hasFlag("-doccut") ) 
+      _docCutoff = Integer.parseInt(params.get("-doccut"));
+    System.out.println("doccut\t" + _docCutoff);
+    
     // Sanity check.
     if( _countByDistance && _withCoref ) {
       System.out.println("We can't count by distance and by coref at the same time...both are set to true.");
@@ -1167,10 +1175,9 @@ public class CountTokenPairs {
         WordEvent e1 = events.get(i);
         String w1 = e1.token();
         seen.clear();
-  //      System.out.println("e1 " + e1 + " w1=" + w1 + " count=" + _idf.getDocCount(w1) + " idf=" + _idf.get(w1));
+//        System.out.println("e1 " + e1 + " w1=" + w1 + " count=" + _idf.getDocCount(w1) + " idf=" + _idf.get(w1));
   
         if( CountArgumentTypes.isObjectString(w1) || (_idf.getDocCount(w1) > _docCutoff && _idf.get(w1) > _idfCutoff) ) {
-  
           for( int j = i+1; j < numEvents && j < i+1+distance; j++ ) {
             WordEvent e2 = events.get(j);
             String w2 = e2.token();
@@ -1193,8 +1200,8 @@ public class CountTokenPairs {
                 String key1 = attachRelation(w1, shared.substring(0,colon));
                 String key2 = attachRelation(w2, shared.substring(colon+1));
                 incrementCount(_countsLemmas, key1, key2, 1);
-  //            System.out.println("adding " + key1 + " " + key2);
-  //            System.out.println("Count\t" + e1 + "\t" + e2 + "\t" + key1 + "\t" + key2);
+//              System.out.println("adding " + key1 + " " + key2);
+//              System.out.println("Count\t" + e1 + "\t" + e2 + "\t" + key1 + "\t" + key2);
                 
                 seen.add(w2);
               }
@@ -1414,7 +1421,7 @@ public class CountTokenPairs {
         if( _numStories++ % 100 == 0 ) Util.reportMemory();
 
         // Trim for memory savings, this can huge in size.
-        if( !_withCoref && _numStories > 7000 && _numStories % 2000 == 0 ) {
+        if( !_withCoref && _numStories > 10000 && _numStories % 2000 == 0 ) {
           System.out.println("Trimming mid-way at " + _numStories + " docs.");
           if( _countsLemmasFloat.size() > 15000 ) trimFloatPairs(1.5f);
           if( _countsLemmas.size() > 15000 ) trimIntegerPairs(2);
