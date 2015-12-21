@@ -35,6 +35,10 @@ while( $line = <IN> ) {
 	$storyID1 = $storyID1 . "-incorrect";
 	$storyID2 = $storyID2 . "-correct";
     }
+    elsif( $answer eq "-1" ) {
+	$storyID1 = $storyID1 . "-unknown1";
+	$storyID2 = $storyID2 . "-unknown2";
+    }
     else {
 	print "Unknown answer $answer from: $line\n";
 	exit;
