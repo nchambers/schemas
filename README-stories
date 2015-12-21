@@ -1,0 +1,24 @@
+CONVERT TAB-DELIMITED FILES TO XML
+---
+scripts/tabs2xmlCloze.pl
+
+This creates a Gigaword-style XML file with two stories for each cloze test. Each cloze test comes with 2 different endings, so the 2 stories in the generated XML file just differ in that sentence. The story name in the DOC element of the XML will say "correct" or "incorrect" to identify which is the correct story.
+
+
+PROCESS THE XML STORY FILE
+---
+e.g.:  runall.sh temp/test-v2.txt outv2test
+
+Give the runall.sh script an input file (from the above XML file creation) and a name for a new output directory that it will create. This directory will be filled with parses/coref/etc. as well as token pair counts and token IDF scores.
+
+NOTE: You must create a new empty directory to put your XML input file inside. The parsing code will look in the directory for all possible files, not just the one file you give the script. (silly, I know)
+
+
+RUN THE CLOZE EXPERIMENT
+---
+
+(running with AP training data)
+./runexperiment.sh -idf processedData/outap/tokens-lemmas.idf-2006 -paircounts processedData/outap/merged.all -stories processedData/outv2test
+
+(running with stories v3 training data)
+./runexperiment.sh -idf processedData/outv3train/tokens-lemmas.idf-all -paircounts processedData/outv3train/token-pairs-vbnn-coref-fullprep.counts -stories processedData/outv2test 
