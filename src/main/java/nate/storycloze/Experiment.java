@@ -1,6 +1,9 @@
 package nate.storycloze;
 
+import java.io.BufferedWriter;
 import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
@@ -43,10 +46,10 @@ public class Experiment {
 	  IDFMap domainIDF = new IDFMap(params.get("-idf"));
 
 	  // Single event counts
-	  CountVerbDepCorefs _relnCountsDomain = new CountVerbDepCorefs(params.get("-depcounts"));
+//	  CountVerbDepCorefs _relnCountsDomain = new CountVerbDepCorefs(params.get("-depcounts"));
 
 	  // Arg counts with single events.
-	  VerbArgCounts _domainSlotArgCounts = new VerbArgCounts(params.get("-argcounts"), 1);
+//	  VerbArgCounts _domainSlotArgCounts = new VerbArgCounts(params.get("-argcounts"), 1);
 
 	  // Event pair counts
 	  CountTokenPairs domainTokenPairCounts = new CountTokenPairs(params.get("-paircounts"));
@@ -63,10 +66,10 @@ public class Experiment {
 	 * @param filepath
 	 */
 	public void readClozeTests(String dir) {
-	  ProcessedData storyReader = new ProcessedData(dir + File.separator + Directory.nearestFile("parsed", dir), 
-        dir + File.separator + Directory.nearestFile("deps", dir), 
-        dir + File.separator + Directory.nearestFile("events", dir), 
-        dir + File.separator + Directory.nearestFile("ner", dir));
+	  ProcessedData storyReader = new ProcessedData(dir + File.separator + Directory.nearestFile(".parse", dir), 
+        dir + File.separator + Directory.nearestFile(".deps", dir), 
+        dir + File.separator + Directory.nearestFile(".events", dir), 
+        dir + File.separator + Directory.nearestFile(".ner", dir));
     storyReader.nextStory();
     
     do {
@@ -96,30 +99,60 @@ public class Experiment {
 	  int predictions[] = new int[_clozeTests.size()];
 	  int i = 0;
 	  
-	  // Make predictions
+	  // Make predictions.
 	  for( StoryClozeTest test : _clozeTests ) {
-//	    System.out.println("Got test0 = " + test.option0.storyname + " with " + test.option0.deps.size());
-//	    System.out.println("Got test1 = " + test.option1.storyname + " with " + test.option1.deps.size());
-
 	    double score0 = scoreTest(test.option0);
 	    double score1 = scoreTest(test.option1);
 	    if( score0 > score1 )
 	      predictions[i++] = 0;
 	    else if( score1 > score0 )
 	      predictions[i++] = 1;
-	    else // if tied, we randomly guess
-	      predictions[i++] = (int)(Math.random()*2.0);
+	    else // if tied, unknown
+	      predictions[i++] = -1;
 	  }
 	  
-	  // Calculate Accuracy
-	  int correct = 0, incorrect = 0;
+	  // Calculate accuracy.
+	  int correct = 0, incorrect = 0, skipped = 0, allcorrect = 0, allincorrect = 0;
 	  for( int j = 0; j < _clozeTests.size(); j++ ) {
-	    if( _clozeTests.get(j).isCorrect(predictions[j]) )
-	      correct++;
-	    else
-	      incorrect++;
+	    // If we made a guess.
+	    if( predictions[j] >= 0 ) {
+	      if( _clozeTests.get(j).isCorrect(predictions[j]) ) {
+	        correct++;
+	        allcorrect++;
+	      }
+	      else {
+	        incorrect++;
+	        allincorrect++;
+	      }
+	    }
+	    // Unknown. Make a guess!
+	    else {
+	      skipped++;
+	      predictions[j] = (int)(Math.random()*2.0);
+	      if( _clozeTests.get(j).isCorrect(predictions[j]) )
+          allcorrect++;
+        else
+          allincorrect++;
+	    }
 	  }
-	  System.out.printf("Accuracy = %d/%d = %.2f\n", correct, (correct+incorrect), ((double)correct/(correct+incorrect)));
+	  
+	  // Write guesses to file for safekeeping.
+    try {
+      BufferedWriter out;
+      out = new BufferedWriter(new FileWriter("experiment-guesses.txt"));
+      for( int j = 0; j < _clozeTests.size(); j++ ) {
+        out.write((predictions[j]+1) + "\n");
+      }
+      out.close();
+    } catch( IOException ex ) {
+      ex.printStackTrace();
+    }
+    
+	  // Print summary stats.
+	  int total = _clozeTests.size();
+	  System.out.println("Didn't guess on " + skipped + " of " + total + " tests.");
+    System.out.printf("Precision = %d/%d = %.2f\n", correct, (correct+incorrect), ((double)correct/(correct+incorrect)));
+    System.out.printf("Accuracy  = %d/%d = %.2f\n", allcorrect, total, ((double)allcorrect/total));
 	}
 
 	/**
@@ -164,12 +197,13 @@ public class Experiment {
             double score = _pairScores.getScore(key1, key2);
             overall += score;
 
-            System.out.println("Shared: " + event + " and " + lastEvent + " pattern=" + shared);
+//            System.out.println("Shared: " + event + " and " + lastEvent + " pattern=" + shared);
             System.out.println("Shared: " + key1 + " and " + key2 + "\tSCORE=" + score);
           }
         }
       }
     }
+    System.out.println("SCORE: " + thedoc.storyname + " = " + overall);
     return overall;
 	}
 	
