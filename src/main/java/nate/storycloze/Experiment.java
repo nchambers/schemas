@@ -150,9 +150,11 @@ public class Experiment {
     
 	  // Print summary stats.
 	  int total = _clozeTests.size();
+	  System.out.println("correct=" + correct + "\tincorrect=" + incorrect);
+	  System.out.println("allcorrect=" + allcorrect + "\tallincorrect=" + allincorrect + "\ttotal=" + total);
 	  System.out.println("Didn't guess on " + skipped + " of " + total + " tests.");
-    System.out.printf("Precision = %d/%d = %.2f\n", correct, (correct+incorrect), ((double)correct/(correct+incorrect)));
-    System.out.printf("Accuracy  = %d/%d = %.2f\n", allcorrect, total, ((double)allcorrect/total));
+    System.out.printf("Precision = %d/%d = %.3f\n", correct, (correct+incorrect), ((double)correct/(correct+incorrect)));
+    System.out.printf("Accuracy  = %d/%d = %.3f\n", allcorrect, total, ((double)allcorrect/total));
 	}
 
 	/**
@@ -163,6 +165,7 @@ public class Experiment {
 	private double scoreTest(ProcessedDocument thedoc) {
 	  List<EntityMention> mentions = thedoc.mentions;
 	  double overall = 0.0;
+	  int matches = 0;
 	  
 	  System.out.println("***************\nscoreTest with " + thedoc.storyname);
 	  
@@ -195,7 +198,16 @@ public class Experiment {
             String key1 = CountTokenPairs.attachRelation(event.token(), shared.substring(0,colon));
             String key2 = CountTokenPairs.attachRelation(lastEvent.token(), shared.substring(colon+1));
             double score = _pairScores.getScore(key1, key2);
-            overall += score;
+            //overall += score;
+            
+            // Penalize the score by distance.
+            int dist = lastSentenceIndex - event.sentenceID();
+//            double penalty = 0.0; // no penalty
+            double penalty = 1.0 - 1.0/dist; // penalize based on sentence distance
+//            double penalty = (dist==1 ? 0.0 : 1.0); // only look at penultimate sentence
+//            System.out.println("\tscore=" + score + "\tnow=" + (score * (1.0-penalty)));
+            overall += score * (1.0-penalty);
+            matches++;
 
 //            System.out.println("Shared: " + event + " and " + lastEvent + " pattern=" + shared);
             System.out.println("Shared: " + key1 + " and " + key2 + "\tSCORE=" + score);
@@ -204,6 +216,8 @@ public class Experiment {
       }
     }
     System.out.println("SCORE: " + thedoc.storyname + " = " + overall);
+//    if( matches > 0 ) overall = overall / (double)matches;
+//    System.out.println("SCORE AVERAGED: " + thedoc.storyname + " = " + overall);
     return overall;
 	}
 	
