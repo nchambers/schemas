@@ -1,5 +1,10 @@
 #!/usr/bin/perl -w
 #
+# Works on the training set of Nasrin's Story Collection.
+# Expected line format:
+# storyid      workerid    storytitle    sentence1    sentence2    sentence3    sentence4    sentence5
+#
+#
 
 my $file = $ARGV[0];
 

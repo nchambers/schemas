@@ -49,7 +49,7 @@ while( $line = <IN> ) {
     print OUT "<TEXT>\n";
     for( my $i = 0; $i < 5; $i++ ) {
 	print OUT "<P>\n";
-	print OUT $parts[2+$i] . "\n";
+	print OUT $parts[1+$i] . "\n";
 	print OUT "</P>\n";
     }
     print OUT "</TEXT>\n</DOC>\n";
@@ -59,11 +59,11 @@ while( $line = <IN> ) {
     print OUT "<TEXT>\n";
     for( my $i = 0; $i < 4; $i++ ) {
 	print OUT "<P>\n";
-	print OUT $parts[2+$i] . "\n";
+	print OUT $parts[1+$i] . "\n";
 	print OUT "</P>\n";
     }
     print OUT "<P>\n";
-    print OUT $parts[7] . "\n";
+    print OUT $parts[6] . "\n";
     print OUT "</P>\n";
     print OUT "</TEXT>\n</DOC>\n";
 }
